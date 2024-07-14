@@ -86,8 +86,8 @@ class RationalDyckPath:
 		return counter
 
 def paths(a, b, end: tuple):
-	if gcd(a,b) != 1:
-		raise Exception('coprime')
+	#if gcd(a,b) != 1:
+	#	raise Exception('coprime')
 	if end[0] < 0 or end[1] < 1:
 		return []
 	if end[0] == 0:
@@ -110,15 +110,15 @@ def paths(a, b, end: tuple):
 	return foo + bar
 
 def Dyck_paths(a: int, b: int):
-	if gcd(a,b) != 1:
-		raise Exception('coprime')
+	#if gcd(a,b) != 1:
+	#	raise Exception('coprime')
 	return paths(a,b,(b,a))
 
 def qtCatalan(a: int, b: int):
 	if a == 0 or b == 0:
 		raise Exception('cannot be zeros')
-	if gcd(a,b) != 1:
-		raise Exception('coprime')
+	#if gcd(a,b) != 1:
+	#	raise Exception('coprime')
 	R.<q,t> = PolynomialRing(ZZ, 'q,t')
 	Cqt = 0
 	for i in Dyck_paths(a, b):
