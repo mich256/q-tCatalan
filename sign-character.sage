@@ -17,4 +17,3 @@ def gen_m_from_parts(p):
 
 def gen_det_from_parts(p):
 	return gen_det(Partition(p).cells())
-
