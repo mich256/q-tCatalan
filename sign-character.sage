@@ -18,6 +18,11 @@ def gen_m_from_parts(p):
 def gen_det_from_parts(p):
 	return gen_det(Partition(p).cells())
 
+def dinv_code(D):
+	n = D.semilength()
+	a = D.to_area_sequence()
+	return [len([j for j in range(i+1,n) if a[j] == a[i] or a[j] == a[i]-1]) for i in range(n-1)]+[0]
+
 def test(n):
 	t = []
 	for D in DyckWords(n):
