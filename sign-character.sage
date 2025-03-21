@@ -17,3 +17,11 @@ def gen_m_from_parts(p):
 
 def gen_det_from_parts(p):
 	return gen_det(Partition(p).cells())
+
+def test(n):
+	t = []
+	for D in DyckWords(n):
+		a = D.to_area_sequence()
+		aa = dinv_code(D)
+		t.append(gen_det(list(zip(a,aa))))
+	return t
