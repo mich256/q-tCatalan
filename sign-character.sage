@@ -12,12 +12,6 @@ def gen_m(l):
 def gen_det(l):
 	return gen_m(l).determinant()
 
-def gen_m_from_parts(p):
-	return gen_m(Partition(p).cells())
-
-def gen_det_from_parts(p):
-	return gen_det(Partition(p).cells())
-
 def dinv_code(D):
 	n = D.semilength()
 	a = D.to_area_sequence()
@@ -30,3 +24,9 @@ def test(n):
 		aa = dinv_code(D)
 		t.append(gen_det(list(zip(a,aa))))
 	return t
+
+def gen_m_from_parts(p):
+	return gen_m(Partition(p).cells())
+
+def gen_det_from_parts(p):
+	return gen_det(Partition(p).cells())
