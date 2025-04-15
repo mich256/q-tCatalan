@@ -1,4 +1,4 @@
-n = 5
+n = 4
 
 # pp is random prime for defining base field
 pp = random_prime(1000)
@@ -21,7 +21,7 @@ l_quot = JGB.normal_basis()
 
 def Poly2Vec(MonList,pol):
     """This function converts polymonial pol into the vector by extracting coeffients in front of monomials from the list MonList."""
-    return([pol.monomial_coefficient(z) for z in l_quot])
+    return([pol.monomial_coefficient(z) for z in MonList])
 
 
 S = SymmetricGroup(n)

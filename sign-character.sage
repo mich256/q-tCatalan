@@ -1,7 +1,9 @@
+pp = random_prime(100)
+
 def gen_ring(n):
 	xs = [var('x_%d'%i) for i in range(1,n+1)]
 	ys = [var('y_%d'%i) for i in range(1,n+1)]
-	return PolynomialRing(QQ, xs+ys)
+	return PolynomialRing(GF(pp), xs+ys, order = 'lex')
 
 def gen_m(l):
 	n = len(l)
@@ -22,7 +24,11 @@ def test(n):
 	for D in DyckWords(n):
 		a = D.to_area_sequence()
 		aa = dinv_code(D)
-		t.append(gen_det(list(zip(a,aa))))
+		temp = gen_det(list(zip(a,aa)))
+		if temp == 0:
+			raise Exception('zero determinant')
+		else:
+			t.append(gen_det(list(zip(a,aa))))
 	return t
 
 def gen_m_from_parts(p):
