@@ -1,4 +1,4 @@
-n = 4
+n = 3
 
 # pp is random prime for defining base field
 pp = random_prime(1000)
@@ -31,9 +31,6 @@ def DescMon(g):
     z = R.gens()
     p = Permutation(g)
     return R.prod(prod(z[p[j]-1] for j in range(i+1)) for i in range(len(p) - 1) if p[i] > p[i + 1])
-
-
-
 
 
 def Desc(g):
@@ -87,7 +84,7 @@ def AntiSym(mm):
     """Antisymmetrization of the monomial mm"""
     return(sum(Act(g,mm)*sign(g) for g in S))
     
-CatGens = [ mm for mm in ListMonBasis if AntiSym(mm) != 0] 
+CatGens = [ mm for mm in ListMonBasis if AntiSym(mm) != 0]
 
 def intersection(lst1, lst2):
     lst3 = [value for value in lst1 if value in lst2]
