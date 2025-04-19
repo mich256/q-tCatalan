@@ -1,4 +1,4 @@
-n = 3
+n = 4
 
 # pp is random prime for defining base field
 pp = random_prime(1000)
@@ -12,7 +12,7 @@ def Pij(i,j):
     """Here we define the power sum of x_k^iy_k^j"""
     return(sum([R.gens()[k]^i*R.gens()[k+n]^j for k in range(n)]))
 
-# J is the defing ideal for the double coinvariants
+# J is the defining ideal for the double coinvariants
 J = ideal([Pij(i,j) for i in range(2*n) for j in range(2*n)][1:])
 JGB = ideal(J.groebner_basis())
 
@@ -118,7 +118,7 @@ print('The Catalan number is '+str(catalan_number(n)))
 ListCatalan = [Poly2Vec(l_quot, AntiSym(mm).reduce(JGB)) for mm in CatGens1]
 MM = matrix(ListCatalan)
 
-print('The rant of the subspace spanned by the antisyms of our monomials is '+str(rank(MM)))
+print('The rank of the subspace spanned by the antisyms of our monomials is '+str(rank(MM)))
 
 M = ideal([AntiSym(mm) for mm in CatGens])
 for gb in ideal(ideal(M^2).groebner_basis()).gens():

@@ -92,17 +92,17 @@ class RationalDyckPath:
 		tt = len(temp)
 		a = self.area_sequence()
 		k = self.vertical-1
-		x = sum([temp[i] for i in range(tt-2) if i%2 == 1]) + tt//2
-		s = x *' ' + (temp[tt-1])* '_' + '\n'
+		x = sum([2*temp[i]-1 for i in range(1,tt-2)[::2]]) + tt//2
+		s = x *' ' + (2*temp[tt-1]-1)* '_' + '\n'
 		for i in list(reversed(range(tt-1)))[::2]:
 			x -= 1
 			if temp[i] > 1:
 				for j in range(temp[i]-1):
-					s += x*' '+ '|' + a[k]* 'x' + '\n'
+					s += x*' '+ '|' + a[k]* ' x' + '\n'
 					k -= 1
-			x -= temp[i-1]
+			x -= 2*temp[i-1]-1
 			if i != 0:
-				s += x*' ' + (temp[i-1])* '_' + '|' + a[k]*'x' + '\n'
+				s += x*' ' + (2*temp[i-1]-1)* '_' + '|' + a[k]*' x' + '\n'
 			else:
 				s += '|'
 			k -= 1
