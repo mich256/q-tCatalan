@@ -120,6 +120,9 @@ MM = matrix(ListCatalan)
 
 print('The rant of the subspace spanned by the antisyms of our monomials is '+str(rank(MM)))
 
-
+M = ideal([AntiSym(mm) for mm in CatGens])
+for gb in ideal(ideal(M^2).groebner_basis()).gens():
+    temp = gb.lm().exponents()[0]
+    list(zip(temp[:3],temp[3:]))
 
 
