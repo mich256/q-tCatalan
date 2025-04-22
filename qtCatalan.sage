@@ -1,13 +1,5 @@
 def get_intervals(binary_list):
-    """
-    Given a list of 0's and 1's that always starts with 1, this function returns a list
-    whose entries correspond to the lengths of consecutive intervals (runs) of 1's and 0's.
-
-    For example:
-    >>> get_intervals([1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1])
-    [2, 3, 3, 2, 1]
-    """
-    if not binary_list:
+	if not binary_list:
         return []
 
     intervals = []     # This will store the run lengths.
@@ -84,6 +76,11 @@ class RationalDyckPath:
 			t += [max(0,floor(y/self.slope) - h[i-1]) for y in range(v[i-1],v[i])]
 		return t
 
+	def diagram(self):
+		P = [floor(i / self.slope) - self.area_sequence()[i] for i in range(self.vertical)]
+		Partition(list(reversed(P))).pp()
+		return P
+
 	def pp(self) -> None:
 		n = len(self.DyckWord)
 		if n == 0:
@@ -148,6 +145,21 @@ class RationalDyckPath:
 			i += 1
 		return counter
 
+	def dinv_code(self):
+		temp = get_intervals(self.DyckWord)
+		v = temp[::2]
+		v = [sum(v[:i+1]) for i in range(len(v))]
+		h = temp[1:][::2]
+		h = [sum(h[:i+1]) for i in range(len(h))]
+		t = self.vertical*[0]
+		for j in range(len(v)-1):
+			for i in range(len(h[j])):
+				arm = h[j] - i
+				for k in range(1,v[j+1]-v[j]+1):
+					if arm/(k+1) <= self.slope and self.slope < (arm+1)/k
+						t[floor((v[j]+k)/i)] += 1
+		return t
+
 def paths(a, b, end: tuple):
 	#if gcd(a,b) != 1:
 	#	raise Exception('coprime')
@@ -173,15 +185,15 @@ def paths(a, b, end: tuple):
 	return foo + bar
 
 def Dyck_paths(a: int, b: int):
-	#if gcd(a,b) != 1:
-	#	raise Exception('coprime')
+	if gcd(a,b) != 1:
+		raise Exception('coprime')
 	return [RationalDyckPath(x) for x in paths(a,b,(b,a))]
 
 def qtCatalan(a: int, b: int):
 	if a == 0 or b == 0:
 		raise Exception('cannot be zeros')
-	#if gcd(a,b) != 1:
-	#	raise Exception('coprime')
+	if gcd(a,b) != 1:
+		raise Exception('coprime')
 	R.<q,t> = PolynomialRing(ZZ, 'q,t')
 	Cqt = 0
 	for i in Dyck_paths(a, b):

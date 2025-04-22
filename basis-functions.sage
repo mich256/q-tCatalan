@@ -1,4 +1,5 @@
 load('sign-character.sage')
+load('diagcoinv.sage')
 
 def powersum(l1,l2,i,j):
     n = len(l1)
@@ -15,9 +16,9 @@ def Poly2Vec(MonList,pol):
     """This function converts polymonial pol into the vector by extracting coeffients in front of monomials from the list MonList."""
     return([pol.monomial_coefficient(z) for z in MonList])
 
+def gb_init(n):
+    return gen_ideal(n).normal_basis()
+
 def test_rank(n):
-    R = gen_ring(n)
-    JGB = R.ideal(gen_ideal(n).groebner_basis())
-    l_quot = JGB.normal_basis()
-    ListV = [Poly2Vec(l_quot, x.reduce(JGB)) for x in test(n)]
-    return rank(matrix(ListV))
+    ListV = [Poly2Vec(gb_init(n), x.reduce(gen_ideal(n))) for x in test(n)]
+    return matrix(ListV)

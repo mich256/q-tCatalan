@@ -1,12 +1,15 @@
-n = 4
+n = 3
 
 # pp is random prime for defining base field
-pp = random_prime(1000)
+#pp = random_prime(1000)
 
 variables = ['x'+str(i) for i in range(1,n+1)] + ['y'+str(i) for i in range(1,n+1)]
 
-R = PolynomialRing(GF(pp),names = variables,order = 'lex')
-R.inject_variables(verbose = False)
+load('sign-character.sage')
+
+R = gen_ring(n)
+#R = gen_ring(n,GF(pp))
+#R.inject_variables(verbose = False)
  
 def Pij(i,j):
     """Here we define the power sum of x_k^iy_k^j"""

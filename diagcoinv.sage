@@ -1,3 +1,5 @@
+load('sign-character.sage')
+
 def schedule(w):
 	n = w.size()
 	r = w.runs()
@@ -13,3 +15,16 @@ def dinv_code(D):
 	n = D.semilength()
 	a = D.to_area_sequence()
 	return [len([j for j in range(i+1,n) if a[j] == a[i] or a[j] == a[i]-1]) for i in range(n-1)]+[0]
+
+def maj(w):
+	des = w.descents()
+	v = w.inverse()
+	n = len(w)
+	return [len([j for j in des if j >= v(i)]) for i in range(1,n+1)]
+
+def CO_basis(n):
+	R = gen_ring(n)
+	v = R.gens()
+	xs = v[:n]
+	ys = v[n:]
+	return sum(prod(ys[i]^(maj(w)[i]) * sum(xs[w[i]-1]^k for k in range(schedule(w)[i]+1)) for i in range(n)) for w in Permutations(n)).monomials()

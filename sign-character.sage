@@ -1,13 +1,13 @@
-load('Basis.sage')
+#load('Basis.sage')
 
-def gen_ring(n):
+def gen_ring(n, F = QQ):
 	xs = [var('x_%d'%i) for i in range(1,n+1)]
 	ys = [var('y_%d'%i) for i in range(1,n+1)]
-	return PolynomialRing(GF(pp), xs+ys, order = 'lex')
+	return PolynomialRing(F, xs+ys, order = 'lex')
 
 def gen_m(l):
 	n = len(l)
-	#R = gen_ring(n)
+	R = gen_ring(n)
 	xy = R.gens()
 	return matrix([[xy[i]^(l[j][0])*xy[n+i]^(l[j][1]) for j in range(n)] for i in range(n)])
 
@@ -31,9 +31,3 @@ def test(n):
 		else:
 			t.append(temp)
 	return t
-
-def gen_m_from_parts(p):
-	return gen_m(Partition(p).cells())
-
-def gen_det_from_parts(p):
-	return gen_det(Partition(p).cells())
