@@ -9,7 +9,6 @@ def get_intervals(binary_list):
 	if current_value != 0 and current_value != 1:
 		raise Exception('input a binary list')
 	count = 1
-
 	# Start from the second element of the list.
 	for item in binary_list[1:]:
 		if item != 0 and item != 1:
@@ -31,6 +30,8 @@ class RationalDyckPath:
 		self.DyckWord = l
 		self.vertical = sum(l)
 		self.horizontal = len(l) - sum(l)
+		# if gcd(self.vertical,self.horizontal) != 1:
+		# 	raise Exception('coprime')
 		self.slope = self.vertical/self.horizontal
 		# self.vertices = [(0,0)]
 		self.dinv_boxes = []
@@ -189,8 +190,8 @@ def paths(a, b, end: tuple):
 	return foo + bar
 
 def Dyck_paths(a: int, b: int):
-	if gcd(a,b) != 1:
-		raise Exception('coprime')
+	# if gcd(a,b) != 1:
+	# 	raise Exception('coprime')
 	return [RationalDyckPath(x) for x in paths(a,b,(b,a))]
 
 def qtCatalan(a: int, b: int):

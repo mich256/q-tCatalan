@@ -1,14 +1,14 @@
 n = 3
 
 # pp is random prime for defining base field
-#pp = random_prime(1000)
+pp = random_prime(1000)
 
 variables = ['x'+str(i) for i in range(1,n+1)] + ['y'+str(i) for i in range(1,n+1)]
 
 load('sign-character.sage')
 
-R = gen_ring(n)
-#R = gen_ring(n,GF(pp))
+#R = gen_ring(n)
+R = gen_ring(n,GF(pp))
 #R.inject_variables(verbose = False)
  
 def Pij(i,j):

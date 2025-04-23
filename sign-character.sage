@@ -1,4 +1,5 @@
 #load('Basis.sage')
+load('qtCatalan.sage')
 
 def gen_ring(n, F = QQ):
 	xs = [var('x_%d'%i) for i in range(1,n+1)]
@@ -19,7 +20,7 @@ def dinv_code(D):
 	a = D.to_area_sequence()
 	return [len([j for j in range(i+1,n) if a[j] == a[i] or a[j] == a[i]-1]) for i in range(n-1)]+[0]
 
-def test(n):
+def normalcat(n):
 	t = []
 	for D in DyckWords(n):
 		a = D.to_area_sequence()
@@ -28,6 +29,20 @@ def test(n):
 		temp = gen_det(list(zip(a,aa)))
 		if temp == 0:
 			raise Exception('zero determinant')
+		else:
+			t.append(temp)
+	return t
+
+def rationalcat(n,m):
+	t = []
+	for D in Dyck_paths(m,n):
+		a = D.area_sequence()
+		d = D.dinv_code()
+		temp = gen_det(list(zip(a,d)))
+		if temp == 0:
+			#raise Exception('zero determinant')
+			print('*')
+			continue
 		else:
 			t.append(temp)
 	return t

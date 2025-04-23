@@ -1,5 +1,6 @@
 load('sign-character.sage')
 load('diagcoinv.sage')
+load('qtCatalan.sage')
 
 def powersum(l1,l2,i,j):
     n = len(l1)
