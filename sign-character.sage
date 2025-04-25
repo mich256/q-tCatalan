@@ -33,6 +33,24 @@ def normalcat(n):
 			t.append(temp)
 	return t
 
+def test2(n):
+	t = []
+	for D in DyckWords(n):
+		a = D.to_area_sequence()
+		tp = [0]*n
+		for i in range(n):
+			if i in D.bounce_path().touch_points():
+				tp[n-i-1] = i
+		temp = gen_det(list(zip(a,tp)))
+		if temp == 0:
+			#raise Exception('zero')
+			print(a,tp)
+			D.bounce_path().pp()
+		else:
+			print(a,tp)
+			t.append(temp)
+	#return t
+
 def rationalcat(n,m):
 	t = []
 	for D in Dyck_paths(m,n):

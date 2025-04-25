@@ -1,0 +1,34 @@
+from random import randint
+from sage.libs.singular.function import singular_function
+minbase = singular_function("minbase")
+
+def bivariate_vandermonde(S):
+    n = len(S)
+    P = PolynomialRing(QQ, ",".join(f"x{i}" for i in [1 .. n]) + "," + ",".join(f"y{i}" for i in [1 .. n]))
+    x = P.gens()[:n]
+    y = P.gens()[n:]
+    M = matrix( [ [ x[i]^a * y[i]^b for i in range(n) ] for a,b in S ])
+    return M.det()
+
+def conjectured_basis(n):
+    S = []
+    for D in DyckWords(n):
+        a = D.to_area_sequence()
+        d = [len([j for j in range(i+1,n) if a[j] == a[i] or a[j] == a[i]-1]) for i in range(n-1)]+[0]
+        S.append(list(zip(a,d)))
+    return S
+
+def test_basis(n,m, randomized=False):
+    Ss = [ bivariate_vandermonde(S) for S in conjectured_basis(n) ]
+    P = Ss[0].parent()
+    if randomized:
+        p = 4
+        while not is_prime(p):
+            p = randint(1000, 10000)
+        gens = P.gens()
+        Q = PolynomialRing(FiniteField(p), gens)
+    else:
+        Q = P
+
+    I = Q.ideal(Ss)
+    return len(minbase(I^m))# == binomial((m+1)*n,n) / (m*n+1)
