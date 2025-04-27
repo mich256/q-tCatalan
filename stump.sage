@@ -31,4 +31,4 @@ def test_basis(n,m, randomized=False):
         Q = P
 
     I = Q.ideal(Ss)
-    return len(minbase(I^m))# == binomial((m+1)*n,n) / (m*n+1)
+    return minbase(I^m)#len(minbase(I^m)) == binomial((m+1)*n,n) / (m*n+1)
