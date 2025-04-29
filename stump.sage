@@ -32,3 +32,35 @@ def test_basis(n,m, randomized=False):
 
     I = Q.ideal(Ss)
     return minbase(I^m)#len(minbase(I^m)) == binomial((m+1)*n,n) / (m*n+1)
+
+def Dpprint(n,m, randomized=False):
+    load('qtCatalan.sage')
+    d = {}
+    for D in Dyck_paths(n,n*m):
+        d[(D.area(),D.dinv())] = D
+    Ss = [ bivariate_vandermonde(S) for S in conjectured_basis(n) ]
+    P = Ss[0].parent()
+    if randomized:
+        p = 4
+        while not is_prime(p):
+            p = randint(1000, 10000)
+        gens = P.gens()
+        Q = PolynomialRing(FiniteField(p), gens)
+    else:
+        Q = P
+
+    I = Q.ideal(Ss)
+    M = minbase(I^m)
+    # qtCat = []
+    x = Q.gens()[:n]
+    y = Q.gens()[n:]
+    for f in M:
+        # print(f)
+        m = f.monomials()[0]
+        xdeg = sum( m.degree(x[i]) for i in range(n))
+        ydeg = sum( m.degree(y[i]) for i in range(n))
+        print(factor(f))
+        D = d[(xdeg,ydeg)]
+        print(list(reversed(sorted(D.dinv_code()))))
+        D.pp()
+    # return qtCat

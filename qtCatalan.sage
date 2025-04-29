@@ -95,7 +95,7 @@ class RationalDyckPath:
 			if l/(a+1) < self.slope and ((a == 0 and l+1 >= self.slope) or (a != 0 and (l+1)/a >= self.slope)):
 				self.dinv_boxes.append((i,j))
 				self.dinv_box_strs[i][2*j] = '.'
-				t[floor(self.vertical-j-1-self.slope*i)] += 1
+				t[floor(self.vertical-i-1-self.slope*j)-1] += 1
 		return t
 
 	def pp(self) -> None:
