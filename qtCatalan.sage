@@ -40,36 +40,7 @@ class RationalDyckPath:
 		self.cumulative_v = [sum(v[:i+1]) for i in range(len(v))]
 		h = temp[1:][::2]
 		self.cumulative_h = [sum(h[:i+1]) for i in range(len(h))]
-		for i in range(len(v)):
-			if self.cumulative_v[i]/self.cumulative_h[i] < self.slope:
-				raise Exception('stay above the diagonal')
-			# self.vertices.append((h,v))
 		self.dinv_box_strs = list(chain.from_iterable([[' ']*(1+sum([2*h[j] for j in range(len(h)-i-1)]))] + [[' ']*sum([2*h[j] for j in range(len(h)-i-1)])]*(max(v[len(h)-i-1]-1,0)) for i in range(len(h)-1))) + [' ']
-
-	# def is_interior(self, x: tuple):
-	# 	l = self.DyckWord
-	# 	a = self.vertical
-	# 	b = self.horizontal
-	# 	if x[0] >= b or x[0] == 0:
-	# 		return False
-	# 	if x[1] >= a or x[1] == 0:
-	# 		return False
-	# 	if x[0] != 0 and x[1]/x[0] <= self.slope:
-	# 		return False
-	# 	n = len(self.DyckWord)
-	# 	v = 0
-	# 	h = 0
-	# 	i = 0
-	# 	while i < n and v < x[1]:
-	# 		v += l[i]
-	# 		h += 1-l[i]
-	# 		i += 1
-	# 	while i < n and h < x[0]:
-	# 		if l[i] == 1:
-	# 			return True
-	# 		h += 1
-	# 		i += 1
-	# 	return False
 
 	def area_sequence(self):
 		v = self.cumulative_v
@@ -131,68 +102,28 @@ class RationalDyckPath:
 	def area(self):
 		return sum(self.area_sequence())
 
-	# def slope_pair(self, x: tuple, y: tuple):
-	# 	if x[0] >= y[0]:
-	# 		return False
-	# 	if y[0] == x[0] + 1:
-	# 		if (y[1] - x[1]) / (y[0] - x[0]) <= self.slope:
-	# 			return True
-	# 		return False
-	# 	s1 = (y[1] - x[1]) / (y[0] - x[0])
-	# 	s2 = (y[1] - x[1] + 1) / (y[0] - x[0] - 1)
-	# 	if s1 <= self.slope and self.slope <= s2:
-	# 		return True
-	# 	return False
-
-	# def dinv(self):
-	# 	i = 0
-	# 	l = self.DyckWord
-	# 	n = len(l)
-	# 	counter = 0
-	# 	while i < n:
-	# 		if l[i] == 0:
-	# 			x = self.vertices[i]
-	# 			j = i+1
-	# 			while j < n:
-	# 				if l[j] == 1:
-	# 					y = self.vertices[j]
-	# 					if self.slope_pair(x,y):
-	# 						#print(x,y)
-	# 						counter += 1
-	# 				j += 1
-	# 		i += 1
-	# 	return counter
 	def dinv(self):
 		return sum(self.dinv_code())
 
-def paths(a, b, end: tuple):
-	#if gcd(a,b) != 1:
-	#	raise Exception('coprime')
-	if end[0] < 0 or end[1] < 1:
-		return []
-	if end[0] == 0:
-		return [[1]*end[1]]
-	if end[1]/end[0] < a/b:
-		return []
-	if end == (0,1):
-		return [[1]]
-	if end == (b,a):
-		foo = paths(a,b,(b-1,a))
-		for i in range(len(foo)):
-			foo[i].append(0)
-		return foo
-	foo = paths(a,b,(end[0]-1,end[1]))
-	bar = paths(a,b,(end[0],end[1]-1))
-	for i in foo:
-		i.append(0)
-	for j in bar:
-		j.append(1)
-	return foo + bar
-
-def Dyck_paths(a: int, b: int):
-	# if gcd(a,b) != 1:
-	# 	raise Exception('coprime')
-	return [RationalDyckPath(x) for x in paths(a,b,(b,a))]
+def Dyck_paths(h: int, v: int):
+	t = []
+	slope = v/h
+	for x in Subsets(h+v,h):
+		tt = [0 if y in x else 1 for y in range(1,v+h+1)]
+		switch = True
+		horizontal_sum = 0
+		vertical_sum = 0
+		for j in range(v+h):
+			horizontal_sum += 1-tt[j]
+			vertical_sum += tt[j]
+			if horizontal_sum == 0:
+				continue
+			elif vertical_sum/horizontal_sum < v/h:
+				switch = False
+				break
+		if switch:
+			t.append(RationalDyckPath(tt))
+	return t
 
 def qtCatalan(a: int, b: int):
 	if a == 0 or b == 0:
