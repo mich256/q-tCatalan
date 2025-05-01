@@ -122,13 +122,9 @@ ListCatalan = [Poly2Vec(l_quot, AntiSym(mm).reduce(JGB)) for mm in CatGens1]
 MM = matrix(ListCatalan)
 
 print('The rank of the subspace spanned by the antisyms of our monomials is '+str(rank(MM)))
-p = 0
-S.<q,t>=QQ['q,t']
+
 M = ideal([AntiSym(mm) for mm in CatGens])
-for gb in ideal(M^2).groebner_basis():
-    temp = gb.lm().exponents()[0]
-    print(temp)
-    p += q^(sum(temp[:3])) * t^(sum(temp[3:]))
-print(p)
+for poly in ideal(M^2).groebner_basis():
+    print(factor(poly))
 
 
