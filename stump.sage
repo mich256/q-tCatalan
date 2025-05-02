@@ -33,6 +33,13 @@ def test_basis(n,m, randomized=False):
     I = Q.ideal(Ss)
     return len(minbase(I^m)) == binomial((m+1)*n,n) / (m*n+1)
 
+def test_new(n):
+    load('sign-character.sage')
+    S = test(n)
+    P = S[0].parent()
+    I = ideal(S)
+    return minbase(I)
+
 def Ddict(n,m):
     load('qtCatalan.sage')
     d = {}
