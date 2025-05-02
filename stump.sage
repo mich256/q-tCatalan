@@ -33,6 +33,13 @@ def test_basis(n,m, randomized=False):
     I = Q.ideal(Ss)
     return len(minbase(I^m)) == binomial((m+1)*n,n) / (m*n+1)
 
+def Ddict(n,m):
+    load('qtCatalan.sage')
+    d = {}
+    for D in Dyck_paths(n*m,n):
+        d[(D.area(),D.dinv())] = D
+    return d
+
 def Dpprint(n,m, randomized=False):
     Ss = [ bivariate_vandermonde(S) for S in conjectured_basis(n) ]
     P = Ss[0].parent()
@@ -51,11 +58,13 @@ def Dpprint(n,m, randomized=False):
     qtring.<q,t> = QQ['q,t']
     x = Q.gens()[:n]
     y = Q.gens()[n:]
+    d = Ddict(n,m)
     for f in M:
         # print(f)
         m = f.monomials()[0]
         xdeg = sum( m.degree(x[i]) for i in range(n))
         ydeg = sum( m.degree(y[i]) for i in range(n))
-        #print(factor(f))
+        print(factor(f))
+        d[(xdeg,ydeg)].pp()
         qtCat += q^(xdeg) * t^(ydeg)
     return qtCat

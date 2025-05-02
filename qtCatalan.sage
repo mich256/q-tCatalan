@@ -64,7 +64,7 @@ class RationalDyckPath:
 		return t, tt
 
 	def dinv(self):
-		return len(self.dinv_boxes())
+		return len(self.dinv_boxes()[0])
 
 	def pp(self) -> None:
 		n = len(self.DyckWord)
@@ -120,10 +120,8 @@ def Dyck_paths(h: int, v: int):
 	return t
 
 def qtCatalan(a: int, b: int):
-	if a == 0 or b == 0:
-		raise Exception('cannot be zeros')
-	R.<q,t> = PolynomialRing(ZZ, 'q,t')
+	R.<q,t> = QQ['q,t']
 	Cqt = 0
-	for i in Dyck_paths(a, b):
-		Cqt += q^(i.area()) * t^(i.dinv())
+	for D in Dyck_paths(a, b):
+		Cqt += q^(D.area()) * t^(D.dinv())
 	return Cqt
