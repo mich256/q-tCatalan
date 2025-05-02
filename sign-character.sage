@@ -46,20 +46,13 @@ def pfdinv(pf):
 	return [len([j for j in range(i+1,n) if (a[j] == a[i] and w(j+1) > w(i+1)) or (a[j] == a[i] - 1 and w(j+1) < w(i))]) for i in range(n-1)]+[0]
 
 def test(n):
-	for pf in ParkingFunctions(n):
-		temp = gen_det(list(zip(pfmaj(pf),pfdinv(pf))))
-		if temp != 0:
-			print(pfmaj(pf),pfdinv(pf))
-			pf.pretty_print()
-	return
-
-def test1(n):
+	t = []
 	for D in DyckWords(n):
 		pf = ParkingFunction(labelling = list(range(1,n+1)), area_sequence=D.to_area_sequence())
-		t1 = list(zip(D.to_area_sequence(),dinv_code(D)))
 		t2 = list(zip(pfmaj(pf),pfdinv(pf)))
 		temp = gen_det(t2)
-		print(t1,t2)
 		if temp == 0:
 			raise Exception('zero')
-	return
+		else:
+			t.append(temp)
+	return t
