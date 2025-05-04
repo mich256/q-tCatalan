@@ -59,13 +59,14 @@ def pfdinv(pf):
 	return [len([j for j in range(i+1,n) if (a[j] == a[i] and w(j+1) > w(i+1)) or (a[j] == a[i] - 1 and w(j+1) < w(i+1))]) for i in range(n-1)]+[0]
 
 def test(n):
-	t = []
+	t = set()
 	for D in DyckWords(n):
 		pfd = pf(D)
 		t2 = list(zip(pfdinv(pfd),D.to_area_sequence()))
+		t.add(frozenset(t2))
 		temp = gen_det(t2)
 		if temp == 0:
 			raise Exception('zero')
-		else:
-			t.append(temp)
+		# else:
+			# t.append(temp)
 	return t
