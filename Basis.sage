@@ -6,9 +6,11 @@ pp = random_prime(1000)
 variables = ['x'+str(i) for i in range(1,n+1)] + ['y'+str(i) for i in range(1,n+1)]
 
 load('sign-character.sage')
+from sage.libs.singular.function import singular_function
+minbase = singular_function("minbase")
 
 #R = gen_ring(n)
-R = gen_ring(n,GF(pp))
+R = gen_ring(n,QQ)
 #R.inject_variables(verbose = False)
  
 def Pij(i,j):
@@ -124,7 +126,13 @@ MM = matrix(ListCatalan)
 print('The rank of the subspace spanned by the antisyms of our monomials is '+str(rank(MM)))
 
 M = ideal([AntiSym(mm) for mm in CatGens])
-for poly in ideal(M^2).groebner_basis():
+load('stump.sage')
+d = Ddict(n,2)
+for poly in minbase(M^2):
     print(factor(poly))
+    m = poly.monomials()[0]
+    xdeg = sum( m.degree(R.gens()[i]) for i in range(n))
+    ydeg = sum( m.degree(R.gens()[n+i]) for i in range(n))
+    d[(xdeg,ydeg)].pp()
 
 

@@ -60,7 +60,7 @@ def Dpprint(n,m, randomized=False):
         Q = P
 
     I = Q.ideal(Ss)
-    M = minbase(I^m)
+    M = minbas(I^m)
     qtCat = 0
     qtring.<q,t> = QQ['q,t']
     x = Q.gens()[:n]
@@ -72,6 +72,7 @@ def Dpprint(n,m, randomized=False):
         xdeg = sum( m.degree(x[i]) for i in range(n))
         ydeg = sum( m.degree(y[i]) for i in range(n))
         print(factor(f))
+        D = d[(xdeg,ydeg)]
         d[(xdeg,ydeg)].pp()
         qtCat += q^(xdeg) * t^(ydeg)
     return qtCat
