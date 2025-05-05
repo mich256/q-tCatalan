@@ -60,7 +60,7 @@ def Dpprint(n,m, randomized=False):
         Q = P
 
     I = Q.ideal(Ss)
-    M = minbas(I^m)
+    M = minbase(I^m)
     qtCat = 0
     qtring.<q,t> = QQ['q,t']
     x = Q.gens()[:n]
