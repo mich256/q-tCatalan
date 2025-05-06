@@ -99,6 +99,26 @@ class RationalDyckPath:
 	def area(self):
 		return sum(self.area_sequence())
 
+	def rank(self):
+		r = [0]
+		counter = 0
+		h = self.horizontal
+		v = self.vertical
+		for i in self.DyckWord:
+			if i == 1:
+				counter += h
+			else:
+				counter -= v
+			r.append(counter)
+		r.pop()
+		return r
+
+	def zeta(self):
+		B = self.rank()
+		sorted_indices = sorted(range(len(B)), key=lambda i: B[i])
+		rearranged_A = [self.DyckWord[i] for i in sorted_indices]
+		return RationalDyckPath(rearranged_A)
+
 def Dyck_paths(h: int, v: int):
 	t = []
 	slope = v/h
