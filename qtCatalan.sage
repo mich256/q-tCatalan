@@ -25,6 +25,14 @@ def get_intervals(binary_list):
 
 	return intervals
 
+def sc(m,p):
+	if 1 <= p <= m:
+		return m+1-p
+	if -m <= p <= 0:
+		return m+p
+	else:
+		return 0
+
 class RationalDyckPath:
 	def __init__(self, l: list):
 		self.DyckWord = l
@@ -62,6 +70,12 @@ class RationalDyckPath:
 				t.append((i,j))
 				tt[i][2*j] = '.'
 		return t, tt
+
+	def dinv_code(self):
+		a = self.area_sequence()
+		m = 1/self.slope
+		n = self.vertical
+		return [sum(sc(m,a[i] - a[j]) for j in range(i+1,n)) for i in range(n-1)] + [0]
 
 	def dinv(self):
 		return len(self.dinv_boxes()[0])

@@ -129,10 +129,10 @@ M = ideal([AntiSym(mm) for mm in CatGens])
 load('stump.sage')
 d = Ddict(n,2)
 for poly in minbase(M^2):
-    print(factor(poly))
+    #print(factor(poly))
     m = poly.monomials()[0]
     xdeg = sum( m.degree(R.gens()[i]) for i in range(n))
     ydeg = sum( m.degree(R.gens()[n+i]) for i in range(n))
-    d[(xdeg,ydeg)].pp()
+    #d[(xdeg,ydeg)].pp()
 
 
