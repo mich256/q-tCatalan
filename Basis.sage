@@ -11,7 +11,7 @@ minbase = singular_function("minbase")
 
 #R = gen_ring(n)
 R = gen_ring(n,QQ)
-#R.inject_variables(verbose = False)
+R.inject_variables(verbose = False)
  
 def Pij(i,j):
     """Here we define the power sum of x_k^iy_k^j"""
@@ -61,6 +61,23 @@ def w_tau(g):
        ll = ll + [n-i+1]
     return(ll)
 
+def pfdinv(pf):
+    w = pf.to_labelling_permutation()
+    a = pf.to_area_sequence()
+    n = len(a)
+    return [len([j for j in range(i+1,n) if (a[j] == a[i] and w(j+1) > w(i+1)) or (a[j] == a[i] - 1 and w(j+1) < w(i+1))]) for i in range(n-1)]+[0]
+
+pfbasis = []
+xs = R.gens()[:n]
+ys = R.gens()[n:]
+
+for pf in ParkingFunctions(n):
+    a = pf.to_area_sequence()
+    d = pfdinv(pf)
+    pfbasis.append(prod(xs[i]^(a[i])*ys[i]^(d[i]) for i in range(n)))
+
+M1 = matrix([Poly2Vec(l_quot,mm.reduce(JGB)) for mm in pfbasis])
+print(rank(M1))
 
 # Generating function for our monomial basis
 MonBasisGenF = sum(DescMon(Permutation(g))* prod(sum(R.gen(g(i+1)+n-1)^k for k in range(w_tau(g)[i])) for i in range(n)) for g in S)
@@ -77,8 +94,6 @@ MM = matrix(ListV)
 # Here we check that our theorem is valid. That is we have a basis of DH
 print('The rank of subspace of spanned by our monomial basis is '+str(rank(MM)))
 print('The dimension of the space of the double coinvariants is '+ str(JGB.vector_space_dimension()))
-
-
 
 def Act(g,mm):
     """Action of g from the symmetric group S on the monomial mm"""
