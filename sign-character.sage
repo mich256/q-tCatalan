@@ -2,19 +2,23 @@
 load('qtCatalan.sage')
 import itertools
 
-def gen_ring(n, F = QQ):
-	xs = [var('x_%d'%i) for i in range(1,n+1)]
-	ys = [var('y_%d'%i) for i in range(1,n+1)]
-	return PolynomialRing(F, xs+ys, order = 'lex')
+n = 3
+
+x = [var('x_%d'%i) for i in range(1,n+1)]
+y = [var('y_%d'%i) for i in range(1,n+1)]
+PolynomialRing(QQ, x+y, order = 'lex')
 
 def gen_m(l):
-	n = len(l)
-	R = gen_ring(n)
-	xy = R.gens()
-	return matrix([[xy[i]^(l[j][0])*xy[n+i]^(l[j][1]) for j in range(n)] for i in range(n)])
+	return matrix([[x[i]^(l[j][0])*y[i]^(l[j][1]) for j in range(n)] for i in range(n)])
 
 def gen_det(l):
 	return gen_m(l).determinant()
+
+def gen_ideal(n):
+	R = gen_ring(n)
+	x = R.gens()[:n]
+	y = R.gens()[n:]
+	return ideal([(sum([x[k]^i*y[k]^j for k in range(n)])) for i in range(2*n) for j in range(2*n)][1:])
 
 def dinv_code(D):
 	n = D.semilength()
@@ -63,10 +67,5 @@ def test(n):
 	for D in DyckWords(n):
 		pfd = pf(D)
 		t2 = list(zip(pfdinv(pfd),D.to_area_sequence()))
-		t.add(frozenset(t2))
-		temp = gen_det(t2)
-		if temp == 0:
-			raise Exception('zero')
-		# else:
-			# t.append(temp)
+		t.add(gen_det(t2))
 	return t
