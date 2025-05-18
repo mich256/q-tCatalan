@@ -1,4 +1,4 @@
-n = 3
+n = 4
 
 x = [var('x_%d'%i) for i in range(1,n+1)]
 y = [var('y_%d'%i) for i in range(1,n+1)]
@@ -39,7 +39,14 @@ def dinv_code(D):
 def allen(n):
 	return [sch(diagram(D)) for D in DyckWords(n)]
 
-vnxy = det(matrix.vandermonde(x)) * det(matrix.vandermonde(y))
+def conjecture(n):
+	temp = []
+	for D in DyckWords(n):
+		tt = vn
+		for i in D.to_area_sequence():
+			tt = E(i)(tt)
+		temp.append(tt)
+	return temp
 
 def mon_to_diff(m, f):
 	temp = f

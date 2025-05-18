@@ -6,7 +6,7 @@ n = 3
 
 x = [var('x_%d'%i) for i in range(1,n+1)]
 y = [var('y_%d'%i) for i in range(1,n+1)]
-PolynomialRing(QQ, x+y, order = 'lex')
+R = PolynomialRing(QQ, x+y, order = 'lex')
 
 def gen_m(l):
 	return matrix([[x[i]^(l[j][0])*y[i]^(l[j][1]) for j in range(n)] for i in range(n)])
@@ -15,10 +15,7 @@ def gen_det(l):
 	return gen_m(l).determinant()
 
 def gen_ideal(n):
-	R = gen_ring(n)
-	x = R.gens()[:n]
-	y = R.gens()[n:]
-	return ideal([(sum([x[k]^i*y[k]^j for k in range(n)])) for i in range(2*n) for j in range(2*n)][1:])
+	return R.ideal([(sum([x[k]^i*y[k]^j for k in range(n)])) for i in range(2*n) for j in range(2*n)][1:])
 
 def dinv_code(D):
 	n = D.semilength()
