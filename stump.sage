@@ -41,7 +41,14 @@ def test_new(n):
     I = ideal(S)
     return minbase(I)
 
-def Ddict(n,m):
+def Ddict(n):
+    load('qtCatalan.sage')
+    d = {}
+    for D in Dyck_paths(n,n):
+        d[frozenset(zip(D.area_sequence(),D.dinv_code()))] = D
+    return d
+
+def Dad(n,m):
     load('qtCatalan.sage')
     d = {}
     for D in Dyck_paths(n*m,n):
@@ -66,14 +73,49 @@ def Dpprint(n,m, randomized=False):
     qtring.<q,t> = QQ['q,t']
     x = Q.gens()[:n]
     y = Q.gens()[n:]
-    d = Ddict(n,m)
+    d = Dad(n,m)
+    dd = Ddict(n)
     for f in M:
         m = f.monomials()[0]
-        xdeg = sum( m.degree(x[i]) for i in range(n))
-        ydeg = sum( m.degree(y[i]) for i in range(n))
-        print(factor(f))
-        D = d[(xdeg,ydeg)]
+        xdeg = [m.degree(x[i]) for i in range(n)]
+        ydeg = [m.degree(y[i]) for i in range(n)]
+        D = d[(sum(xdeg),sum(ydeg))]
         print(D.dinv_code())
         D.pp()
-        qtCat += q^(xdeg) * t^(ydeg)
-    return qtCat
+        L = factor(f)
+        temp = L[0][0].monomials()
+        if len(temp) != 2:
+            m1 = temp[0]
+            x1 = [m1.degree(x[i]) for i in range(n)]
+            y1 = [m1.degree(y[i]) for i in range(n)]
+            D = dd[frozenset(zip(x1,y1))]
+            print(D.dinv_code())
+            D.pp()
+        elif temp[0].degree(x[0]) == 1:
+            temp = [(i,0) for i in range(n)]
+            print([0]*n)
+            dd[frozenset(temp)].pp()
+        else:
+            temp = [(0,i) for i in range(n)]
+            print(list(range(n))[::-1])
+            dd[frozenset(temp)].pp()
+        temp = L[-1][0].monomials()
+        if len(temp) != 2:
+            m2 = temp[0]
+            x2 = [m2.degree(x[i]) for i in range(n)]
+            y2 = [m2.degree(y[i]) for i in range(n)]
+            D = dd[frozenset(zip(x2,y2))]
+            print(D.dinv_code())
+            D.pp()
+        elif temp[0].degree(x[0]) == 1:
+            temp = [(i,0) for i in range(n)]
+            print([0]*n)
+            dd[frozenset(temp)].pp()
+        else:
+            temp = [(0,i) for i in range(n)]
+            print(list(range(n))[::-1])
+            dd[frozenset(temp)].pp()
+            
+        print('\n')
+        #qtCat += q^(xdeg) * t^(ydeg)
+    return #qtCat

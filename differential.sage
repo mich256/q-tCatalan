@@ -4,7 +4,16 @@ x = [var('x_%d'%i) for i in range(1,n+1)]
 y = [var('y_%d'%i) for i in range(1,n+1)]
 R = PolynomialRing(QQ, x+y, order = 'lex')
 
-vn = det(matrix.vandermonde(x))
+vn = prod(x[i]-x[j] for i in range(n) for j in range(i))
+
+def gen_m(l):
+	return matrix([[x[i]^(l[j][0])*y[i]^(l[j][1]) for j in range(n)] for i in range(n)])
+
+def gen_det(l):
+	return gen_m(l).determinant()
+
+def gen_ideal(n):
+	return R.ideal([(sum([x[k]^i*y[k]^j for k in range(n)])) for i in range(2*n) for j in range(2*n)][1:])
 
 def comp(a,b):
 	return lambda x: a(b(x))
@@ -21,9 +30,12 @@ def psm(mu):
 Sym = SymmetricFunctions(QQ)
 s = Sym.schur()
 p = Sym.powersum()
+e = Sym.elementary()
+h = Sym.homogeneous()
 
 def sch(l):
 	expanded = p(s(l))
+	print(l,expanded)
 	parts = expanded.support()
 	return sum(expanded.coefficient(par) * psm(par) for par in parts)
 
@@ -39,14 +51,8 @@ def dinv_code(D):
 def allen(n):
 	return [sch(diagram(D)) for D in DyckWords(n)]
 
-def conjecture(n):
-	temp = []
-	for D in DyckWords(n):
-		tt = vn
-		for i in D.to_area_sequence():
-			tt = E(i)(tt)
-		temp.append(tt)
-	return temp
+def prodfact(tu):
+	return prod(factorial(i) for i in tu)
 
 def mon_to_diff(m, f):
 	temp = f

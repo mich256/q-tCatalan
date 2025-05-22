@@ -118,6 +118,7 @@ class RationalDyckPath:
 		counter = 0
 		h = self.horizontal
 		v = self.vertical
+		g = gcd(h,v)
 		for i in self.DyckWord:
 			if i == 1:
 				counter += h
@@ -129,7 +130,7 @@ class RationalDyckPath:
 
 	def zeta(self):
 		B = self.rank()
-		sorted_indices = sorted(range(len(B)), key=lambda i: B[i])
+		sorted_indices = sorted(range(len(B)), key=lambda i: (B[i], -i))
 		rearranged_A = [self.DyckWord[i] for i in sorted_indices]
 		return RationalDyckPath(rearranged_A)
 
