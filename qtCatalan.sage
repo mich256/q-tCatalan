@@ -22,7 +22,6 @@ def get_intervals(binary_list):
 
 	# Append the final run length.
 	intervals.append(count)
-
 	return intervals
 
 def sc(m,p):
@@ -133,6 +132,27 @@ class RationalDyckPath:
 		sorted_indices = sorted(range(len(B)), key=lambda i: (B[i], -i))
 		rearranged_A = [self.DyckWord[i] for i in sorted_indices]
 		return RationalDyckPath(rearranged_A)
+
+	def bounce_sequence(self):
+		v = []
+		h = [0]
+		horizontal_sum = 0
+		vertical_sum = 0
+		index = 0
+		while horizontal_sum < self.horizontal and vertical_sum < self.vertical:
+			v.append(self.cumulative_v[index] - vertical_sum)
+			vertical_sum = self.cumulative_v[index]
+			if len(v) <= 1/self.slope:
+				h.append(h[-1]+v[-1])
+			else:
+				h.append(h[-1]-v[-1/self.slope-1]+v[-1])
+			horizontal_sum += h[-1]
+			while horizontal_sum >= self.cumulative_h[index]:
+				index += 1
+		return v
+
+	def bounce(self):
+		return sum([i*self.bounce_sequence()[i] for i in range(len(self.bounce_sequence()))])
 
 def Dyck_paths(h: int, v: int):
 	t = []

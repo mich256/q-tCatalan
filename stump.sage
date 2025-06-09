@@ -42,17 +42,17 @@ def test_new(n):
     return minbase(I)
 
 def Ddict(n):
-    load('qtCatalan.sage')
+    load('sign-character.sage')
     d = {}
-    for D in Dyck_paths(n,n):
-        d[frozenset(zip(D.area_sequence(),D.dinv_code()))] = D
+    for D in DyckWords(n):
+        d[D.area(),D.bounce()] = D
     return d
 
 def Dad(n,m):
     load('qtCatalan.sage')
     d = {}
     for D in Dyck_paths(n*m,n):
-        d[(D.area(),D.dinv())] = D
+        d[(D.area(),D.bounce())] = D
     return d
 
 def Dpprint(n,m, randomized=False):
@@ -69,8 +69,10 @@ def Dpprint(n,m, randomized=False):
 
     I = Q.ideal(Ss)
     M = minbase(I^m)
+    load('qtCatalan.sage')
+    tt = qtCatalan(n*m,n)
+    R = tt.parent()
     qtCat = 0
-    qtring.<q,t> = QQ['q,t']
     x = Q.gens()[:n]
     y = Q.gens()[n:]
     d = Dad(n,m)
@@ -80,7 +82,7 @@ def Dpprint(n,m, randomized=False):
         xdeg = [m.degree(x[i]) for i in range(n)]
         ydeg = [m.degree(y[i]) for i in range(n)]
         D = d[(sum(xdeg),sum(ydeg))]
-        print(D.dinv_code())
+        print(D.bounce())
         D.pp()
         L = factor(f)
         temp = L[0][0].monomials()
@@ -88,34 +90,52 @@ def Dpprint(n,m, randomized=False):
             m1 = temp[0]
             x1 = [m1.degree(x[i]) for i in range(n)]
             y1 = [m1.degree(y[i]) for i in range(n)]
-            D = dd[frozenset(zip(x1,y1))]
-            print(D.dinv_code())
+            D = dd[sum(x1),sum(y1)]
+            print(D.bounce())
             D.pp()
         elif temp[0].degree(x[0]) == 1:
             temp = [(i,0) for i in range(n)]
-            print([0]*n)
-            dd[frozenset(temp)].pp()
+            print(0)
+            dd[binomial(n,2),0].pp()
         else:
             temp = [(0,i) for i in range(n)]
-            print(list(range(n))[::-1])
-            dd[frozenset(temp)].pp()
+            print(binomial(n,2))
+            dd[0,binomial(n,2)].pp()
         temp = L[-1][0].monomials()
         if len(temp) != 2:
             m2 = temp[0]
             x2 = [m2.degree(x[i]) for i in range(n)]
             y2 = [m2.degree(y[i]) for i in range(n)]
-            D = dd[frozenset(zip(x2,y2))]
-            print(D.dinv_code())
+            D = dd[sum(x2),sum(y2)]
+            print(D.bounce())
             D.pp()
         elif temp[0].degree(x[0]) == 1:
             temp = [(i,0) for i in range(n)]
-            print([0]*n)
-            dd[frozenset(temp)].pp()
+            print(0)
+            dd[binomial(n,2),0].pp()
         else:
             temp = [(0,i) for i in range(n)]
-            print(list(range(n))[::-1])
-            dd[frozenset(temp)].pp()
+            print(binomial(n,2))
+            dd[0,binomial(n,2)].pp()
             
         print('\n')
-        #qtCat += q^(xdeg) * t^(ydeg)
-    return #qtCat
+        qtCat += R.gens()[0]^(sum(xdeg)) * R.gens()[1]^(sum(ydeg))
+    return qtCat == tt
+
+
+def test(n):
+    load('qtCatalan.sage')
+    load('sign-character.sage')
+    R = gen_ring(n)
+    temp = []
+    d = {}
+    for D in Dyck_paths(n,n):
+        d[tuple([D.area()]+D.dinv_code())] = D
+    for D in Dyck_paths(2*n,n):
+        for i in d.keys():
+            for j in d.keys():
+                if tuple(x+y for x,y in zip(i,j)) == tuple([D.area()] + D.dinv_code()):
+                    temp.append(gen_det(list(zip(d[i].area_sequence(),d[i].dinv_code())))*gen_det(list(zip(d[j].area_sequence(),d[j].dinv_code()))))
+    J = R.ideal(temp)
+    I = R.ideal(normalcat(n))
+    return J == R.ideal(I^2)

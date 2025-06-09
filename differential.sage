@@ -1,30 +1,48 @@
-n = 4
+def gen_ring(n):
+	x = [var('x_%d'%i) for i in range(1,n+1)]
+	y = [var('y_%d'%i) for i in range(1,n+1)]
+	return PolynomialRing(QQ, x+y, order = 'lex')
 
-x = [var('x_%d'%i) for i in range(1,n+1)]
-y = [var('y_%d'%i) for i in range(1,n+1)]
-R = PolynomialRing(QQ, x+y, order = 'lex')
-
-vn = prod(x[i]-x[j] for i in range(n) for j in range(i))
+def vand(n):
+	R = gen_ring(n)
+	x = R.gens()[:n]
+	return prod(x[i]-x[j] for i in range(n) for j in range(i))
 
 def gen_m(l):
+	n=len(l)
+	R = gen_ring(n)
+	x = R.gens()[:n]
+	y = R.gens()[n:]
 	return matrix([[x[i]^(l[j][0])*y[i]^(l[j][1]) for j in range(n)] for i in range(n)])
 
 def gen_det(l):
 	return gen_m(l).determinant()
 
 def gen_ideal(n):
+	R = gen_ring(n)
+	x = R.gens()[:n]
+	y = R.gens()[n:]
 	return R.ideal([(sum([x[k]^i*y[k]^j for k in range(n)])) for i in range(2*n) for j in range(2*n)][1:])
 
 def comp(a,b):
 	return lambda x: a(b(x))
 
-def E(p):
+def E(p,n):
+	R = gen_ring(n)
+	x = R.gens()[:n]
+	y = R.gens()[n:]
 	return lambda f: sum(y[j] * f.derivative(x[j], p) for j in range(n))
 
-def psm(mu):
-	temp = vn
+def applyE(l,n):
+	temp = vand(n)
+	for i in sorted(l):
+		temp = E(i,n)(temp)
+	return factor(temp/(temp.coefficients()[0][0]))
+
+def psm(mu,n):
+	temp = vand(n)
 	for i in mu:
-		temp = E(i)(temp)
+		temp = E(i,n)(temp)
 	return temp
 
 Sym = SymmetricFunctions(QQ)
