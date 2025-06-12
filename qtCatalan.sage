@@ -24,6 +24,17 @@ def get_intervals(binary_list):
 	intervals.append(count)
 	return intervals
 
+def latex(dw):
+	i,j = 0,0
+		t = []
+		for k in dw:
+			if k == 1:
+				j += 1
+			else:
+				i += 1
+			t.append(str((i,j)))
+		return '--'.join(t)
+
 def sc(m,p):
 	if 1 <= p <= m:
 		return m+1-p
@@ -153,6 +164,17 @@ class RationalDyckPath:
 
 	def bounce(self):
 		return sum([i*self.bounce_sequence()[i] for i in range(len(self.bounce_sequence()))])
+
+	def latex(self):
+		i,j = 0,0
+		t = []
+		for k in self.DyckWord:
+			if k == 1:
+				j += 1
+			else:
+				i += 1
+			t.append(str((i,j)))
+		return '--'.join(t)
 
 def Dyck_paths(h: int, v: int):
 	t = []
