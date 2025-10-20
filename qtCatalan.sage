@@ -26,14 +26,14 @@ def get_intervals(binary_list):
 
 def latex(dw):
 	i,j = 0,0
-		t = []
-		for k in dw:
-			if k == 1:
-				j += 1
-			else:
-				i += 1
-			t.append(str((i,j)))
-		return '--'.join(t)
+	t = []
+	for k in dw:
+		if k == 1:
+			j += 1
+		else:
+			i += 1
+		t.append(str((i,j)))
+	return '--'.join(t)
 
 def sc(m,p):
 	if 1 <= p <= m:
@@ -91,34 +91,8 @@ class RationalDyckPath:
 		return len(self.dinv_boxes()[0])
 
 	def pp(self) -> None:
-		n = len(self.DyckWord)
-		if n == 0:
-			return
-		temp = get_intervals(self.DyckWord)
-		tt = len(temp)
-		a = self.area_sequence()
-		k = self.vertical-1
-		st = self.dinv_boxes()[1]
-		#x = sum([2*temp[i]-1 for i in range(1,tt-2)[::2]]) + tt//2
-		if temp[0] == self.vertical:
-			s = ' ' + (2*self.horizontal-1)* '_' + '\n'
-		else:
-			s = ''.join(st[0]) + ' ' + (2*temp[-1]-1)* '_' + '\n'
-		for i in list(reversed(range(tt-1)))[::2]:
-			if i == 0:
-				for j in range(temp[0]):
-					s += '|' + a[k]* ' x' + '\n'
-					k -= 1
-				print(s)
-				return
-			for j in range(temp[i]-1):
-				s += ''.join(st[self.vertical-k])+ '|' + a[k]* ' x' + '\n'
-				k -= 1
-			s += ''.join(st[self.vertical-k]) + ' ' + (2*temp[i-1]-1)* '_' + '|' + a[k]*' x' + '\n'
-			k -= 1
-
-	def pretty_print(self):
-		self.pp()
+		l = [i/self.slope for i in range(self.vertical)]
+		SkewPartition([l[::-1], [l[i] - self.area_sequence()[i] for i in range(self.vertical)][::-1]]).pp()
 
 	def area(self):
 		return sum(self.area_sequence())
@@ -144,7 +118,7 @@ class RationalDyckPath:
 		rearranged_A = [self.DyckWord[i] for i in sorted_indices]
 		return RationalDyckPath(rearranged_A)
 
-	def bounce_sequence(self):
+	def bounce_v(self):
 		v = []
 		h = [0]
 		horizontal_sum = 0
@@ -162,8 +136,16 @@ class RationalDyckPath:
 				index += 1
 		return v
 
+	def bounce_sequence(self):
+		v = self.bounce_v()
+		return [j for j in range(len(v)) for i in range(v[j])]
+
+	def bounce_code(self):
+		v = self.bounce_v()
+		return Composition(v[1:][::-1]).partial_sums(final = True)
+
 	def bounce(self):
-		return sum([i*self.bounce_sequence()[i] for i in range(len(self.bounce_sequence()))])
+		return sum(self.bounce_sequence())
 
 	def latex(self):
 		i,j = 0,0

@@ -7,7 +7,7 @@ def bivariate_vandermonde(S):
     P = PolynomialRing(QQ, ",".join(f"x{i}" for i in [1 .. n]) + "," + ",".join(f"y{i}" for i in [1 .. n]))
     x = P.gens()[:n]
     y = P.gens()[n:]
-    M = matrix( [ [ x[i]^a * y[i]^b for i in range(n) ] for a,b in S ])
+    M = matrix([[x[i]^a * y[i]^b / (factorial(a) * factorial(b)) for i in range(n)] for a,b in S])
     return M.det()
 
 def conjectured_basis(n):
@@ -42,7 +42,6 @@ def test_new(n):
     return minbase(I)
 
 def Ddict(n):
-    load('sign-character.sage')
     d = {}
     for D in DyckWords(n):
         d[D.area(),D.bounce()] = D
@@ -82,60 +81,32 @@ def Dpprint(n,m, randomized=False):
         xdeg = [m.degree(x[i]) for i in range(n)]
         ydeg = [m.degree(y[i]) for i in range(n)]
         D = d[(sum(xdeg),sum(ydeg))]
-        print(D.bounce())
         D.pp()
+        print(D.bounce_sequence())
         L = factor(f)
+        print(L)
         temp = L[0][0].monomials()
         if len(temp) != 2:
             m1 = temp[0]
             x1 = [m1.degree(x[i]) for i in range(n)]
             y1 = [m1.degree(y[i]) for i in range(n)]
             D = dd[sum(x1),sum(y1)]
-            print(D.bounce())
             D.pp()
+            print(D.bounce_path().touch_points())
         elif temp[0].degree(x[0]) == 1:
-            temp = [(i,0) for i in range(n)]
-            print(0)
-            dd[binomial(n,2),0].pp()
+            continue
         else:
-            temp = [(0,i) for i in range(n)]
-            print(binomial(n,2))
-            dd[0,binomial(n,2)].pp()
+            continue
         temp = L[-1][0].monomials()
         if len(temp) != 2:
             m2 = temp[0]
             x2 = [m2.degree(x[i]) for i in range(n)]
             y2 = [m2.degree(y[i]) for i in range(n)]
             D = dd[sum(x2),sum(y2)]
-            print(D.bounce())
             D.pp()
+            print(D.bounce_path().touch_points())
         elif temp[0].degree(x[0]) == 1:
-            temp = [(i,0) for i in range(n)]
-            print(0)
-            dd[binomial(n,2),0].pp()
+            continue
         else:
-            temp = [(0,i) for i in range(n)]
-            print(binomial(n,2))
-            dd[0,binomial(n,2)].pp()
-            
-        print('\n')
-        qtCat += R.gens()[0]^(sum(xdeg)) * R.gens()[1]^(sum(ydeg))
-    return qtCat == tt
-
-
-def test(n):
-    load('qtCatalan.sage')
-    load('sign-character.sage')
-    R = gen_ring(n)
-    temp = []
-    d = {}
-    for D in Dyck_paths(n,n):
-        d[tuple([D.area()]+D.dinv_code())] = D
-    for D in Dyck_paths(2*n,n):
-        for i in d.keys():
-            for j in d.keys():
-                if tuple(x+y for x,y in zip(i,j)) == tuple([D.area()] + D.dinv_code()):
-                    temp.append(gen_det(list(zip(d[i].area_sequence(),d[i].dinv_code())))*gen_det(list(zip(d[j].area_sequence(),d[j].dinv_code()))))
-    J = R.ideal(temp)
-    I = R.ideal(normalcat(n))
-    return J == R.ideal(I^2)
+            continue
+    return
