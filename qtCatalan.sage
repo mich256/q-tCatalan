@@ -76,7 +76,7 @@ class RationalDyckPath:
 		for (i,j) in La.cells():
 			a = La.arm_length(i,j)
 			l = La.leg_length(i,j)
-			if l/(a+1) < self.slope and a/(l+1) <= 1/self.slope:
+			if l/(a+1) <= self.slope and a/(l+1) < 1/self.slope:
 				t.append((i,j))
 				tt[i][2*j] = '.'
 		return t, tt
@@ -148,15 +148,17 @@ class RationalDyckPath:
 		return sum(self.bounce_sequence())
 
 	def latex(self):
+		res = '\\begin{tikzpicture}[scale=0.5]\n'
+		res += '\\draw[dotted] (0,0) grid (%d,%d);\n' % (self.horizontal,self.vertical)
+		res += '\\draw[thick] (0,0)'
 		i,j = 0,0
-		t = []
 		for k in self.DyckWord:
 			if k == 1:
 				j += 1
 			else:
 				i += 1
-			t.append(str((i,j)))
-		return '--'.join(t)
+			res += '--(%d,%d)'%(i,j)
+		return res + ';\n' + '\\end{tikzpicture}\n'
 
 def Dyck_paths(h: int, v: int):
 	t = []

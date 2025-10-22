@@ -28,3 +28,22 @@ def CO_basis(n):
 	xs = v[:n]
 	ys = v[n:]
 	return sum(prod(ys[i]^(maj(w)[i]) * sum(xs[w[i]-1]^k for k in range(schedule(w)[i])) for i in range(n)) for w in Permutations(n)).monomials()
+
+def dw_latex(dw, aa = False, dd = False):
+	n = dw.semilength()
+	res = '\\begin{tikzpicture}[scale=0.5]\n'
+	res += '\\draw[dotted] (0,0) grid (%d,%d);\n' % (n,n)
+	res += '\\draw[thick] (0,0)'
+	stats = ''
+	coord = [0,0]
+	for i in range(len(dw)):
+		if dw[i] == 1:
+			coord[1] += 1
+		if dw[i] == 0:
+			coord[0] += 1
+		res += '--(%d,%d)'% tuple(coord)
+	if aa:
+		stats += '\\draw node at (1,-.5) {area: %d};\n' % dw.to_area_sequence()
+	if dd:
+		stats += '\\draw node at (1,-1.5) {dinv: %d};\n' % dinv_code(dw)
+	return res + ';\n' + stats + '\\end{tikzpicture}\n'
