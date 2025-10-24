@@ -1,6 +1,9 @@
 from random import randint
 from sage.libs.singular.function import singular_function
 minbase = singular_function("minbase")
+load('qtCatalan.sage')
+load('diagcoinv.sage')
+load('sign-character.sage')
 
 def bivariate_vandermonde(S):
     n = len(S)
@@ -35,7 +38,6 @@ def test_basis(n,m, randomized=False):
     return len(minbase(I^m)) == binomial((m+1)*n,n) / (m*n+1)
 
 def test_new(n):
-    load('sign-character.sage')
     S = test(n)
     P = S[0].parent()
     I = ideal(S)
@@ -48,7 +50,6 @@ def Ddict(n):
     return d
 
 def Dad(n,m):
-    load('qtCatalan.sage')
     d = {}
     for D in Dyck_paths(n*m,n):
         d[(D.area(),D.bounce())] = D
@@ -68,7 +69,6 @@ def Dpprint(n,m, randomized=False):
 
     I = Q.ideal(Ss)
     M = minbase(I^m)
-    load('qtCatalan.sage')
     tt = qtCatalan(n*m,n)
     R = tt.parent()
     qtCat = 0
@@ -80,19 +80,17 @@ def Dpprint(n,m, randomized=False):
         m = f.monomials()[0]
         xdeg = [m.degree(x[i]) for i in range(n)]
         ydeg = [m.degree(y[i]) for i in range(n)]
-        D = d[(sum(xdeg),sum(ydeg))]
+        D = d[(sum(ydeg),sum(xdeg))]
         D.pp()
-        print(D.bounce_sequence())
         L = factor(f)
-        print(L)
+        print(latex(L))
         temp = L[0][0].monomials()
         if len(temp) != 2:
             m1 = temp[0]
             x1 = [m1.degree(x[i]) for i in range(n)]
             y1 = [m1.degree(y[i]) for i in range(n)]
-            D = dd[sum(x1),sum(y1)]
-            D.pp()
-            print(D.bounce_path().touch_points())
+            D = dd[sum(y1),sum(x1)]
+            #dw_latex(D.reverse())
         elif temp[0].degree(x[0]) == 1:
             continue
         else:
@@ -102,9 +100,8 @@ def Dpprint(n,m, randomized=False):
             m2 = temp[0]
             x2 = [m2.degree(x[i]) for i in range(n)]
             y2 = [m2.degree(y[i]) for i in range(n)]
-            D = dd[sum(x2),sum(y2)]
-            D.pp()
-            print(D.bounce_path().touch_points())
+            D = dd[sum(y2),sum(x2)]
+            #dw_latex(D.reverse())
         elif temp[0].degree(x[0]) == 1:
             continue
         else:

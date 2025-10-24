@@ -46,4 +46,4 @@ def dw_latex(dw, aa = False, dd = False):
 		stats += '\\draw node at (1,-.5) {area: %d};\n' % dw.to_area_sequence()
 	if dd:
 		stats += '\\draw node at (1,-1.5) {dinv: %d};\n' % dinv_code(dw)
-	return res + ';\n' + stats + '\\end{tikzpicture}\n'
+	print(res + ';\n' + stats + '\\end{tikzpicture}')

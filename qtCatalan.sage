@@ -24,17 +24,6 @@ def get_intervals(binary_list):
 	intervals.append(count)
 	return intervals
 
-def latex(dw):
-	i,j = 0,0
-	t = []
-	for k in dw:
-		if k == 1:
-			j += 1
-		else:
-			i += 1
-		t.append(str((i,j)))
-	return '--'.join(t)
-
 def sc(m,p):
 	if 1 <= p <= m:
 		return m+1-p
@@ -91,8 +80,31 @@ class RationalDyckPath:
 		return len(self.dinv_boxes()[0])
 
 	def pp(self) -> None:
-		l = [i/self.slope for i in range(self.vertical)]
-		SkewPartition([l[::-1], [l[i] - self.area_sequence()[i] for i in range(self.vertical)][::-1]]).pp()
+		n = len(self.DyckWord)
+		if n == 0:
+			return
+		temp = get_intervals(self.DyckWord)
+		tt = len(temp)
+		a = self.area_sequence()
+		k = self.vertical-1
+		st = self.dinv_boxes()[1]
+		#x = sum([2*temp[i]-1 for i in range(1,tt-2)[::2]]) + tt//2
+		if temp[0] == self.vertical:
+			s = ' ' + (2*self.horizontal-1)* '_' + '\n'
+		else:
+			s = ''.join(st[0]) + ' ' + (2*temp[-1]-1)* '_' + '\n'
+		for i in list(reversed(range(tt-1)))[::2]:
+			if i == 0:
+				for j in range(temp[0]):
+					s += '|' + a[k]* ' x' + '\n'
+					k -= 1
+				print(s)
+				return
+			for j in range(temp[i]-1):
+				s += ''.join(st[self.vertical-k])+ '|' + a[k]* ' x' + '\n'
+				k -= 1
+			s += ''.join(st[self.vertical-k]) + ' ' + (2*temp[i-1]-1)* '_' + '|' + a[k]*' x' + '\n'
+			k -= 1
 
 	def area(self):
 		return sum(self.area_sequence())
@@ -158,7 +170,7 @@ class RationalDyckPath:
 			else:
 				i += 1
 			res += '--(%d,%d)'%(i,j)
-		return res + ';\n' + '\\end{tikzpicture}\n'
+		print(res + ';\n' + '\\end{tikzpicture}')
 
 def Dyck_paths(h: int, v: int):
 	t = []
