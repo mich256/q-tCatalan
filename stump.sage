@@ -83,7 +83,7 @@ def Dpprint(n,m, randomized=False):
         D = d[(sum(ydeg),sum(xdeg))]
         D.pp()
         L = factor(f)
-        print(latex(L))
+        print(L)
         temp = L[0][0].monomials()
         if len(temp) != 2:
             m1 = temp[0]

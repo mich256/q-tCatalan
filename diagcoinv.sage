@@ -1,4 +1,5 @@
 load('sign-character.sage')
+load('bounce.sage')
 
 def schedule(w):
 	n = w.size()
@@ -29,7 +30,7 @@ def CO_basis(n):
 	ys = v[n:]
 	return sum(prod(ys[i]^(maj(w)[i]) * sum(xs[w[i]-1]^k for k in range(schedule(w)[i])) for i in range(n)) for w in Permutations(n)).monomials()
 
-def dw_latex(dw, aa = False, dd = False):
+def dw_latex(dw, aa = False, dd = False, bb = False):
 	n = dw.semilength()
 	res = '\\begin{tikzpicture}[scale=0.5]\n'
 	res += '\\draw[dotted] (0,0) grid (%d,%d);\n' % (n,n)
@@ -43,7 +44,9 @@ def dw_latex(dw, aa = False, dd = False):
 			coord[0] += 1
 		res += '--(%d,%d)'% tuple(coord)
 	if aa:
-		stats += '\\draw node at (1,-.5) {area: %d};\n' % dw.to_area_sequence()
+		stats += '\\draw node at (1,-.5) {area: %s};\n' % str(dw.to_area_sequence())
 	if dd:
-		stats += '\\draw node at (1,-1.5) {dinv: %d};\n' % dinv_code(dw)
+		stats += '\\draw node at (1,-1.5) {dinv: %s};\n' % str(dinv_code(dw))
+	if bb:
+		stats += '\\draw node at (1,-2) {bounce: %s};\n' % str(bounce_seq(dw))
 	print(res + ';\n' + stats + '\\end{tikzpicture}')
