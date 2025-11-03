@@ -9,8 +9,7 @@ load('sign-character.sage')
 from sage.libs.singular.function import singular_function
 minbase = singular_function("minbase")
 
-#R = gen_ring(n)
-R = gen_ring(n,QQ)
+R = gen_ring(n)
 R.inject_variables(verbose = False)
  
 def Pij(i,j):
@@ -23,6 +22,7 @@ JGB = ideal(J.groebner_basis())
 
 # Groebner basis for DH
 l_quot = JGB.normal_basis()
+print(l_quot)
 
 def Poly2Vec(MonList,pol):
     """This function converts polymonial pol into the vector by extracting coeffients in front of monomials from the list MonList."""

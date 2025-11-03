@@ -50,3 +50,33 @@ def dw_latex(dw, aa = False, dd = False, bb = False):
 	if bb:
 		stats += '\\draw node at (1,-2) {bounce: %s};\n' % str(bounce_seq(dw))
 	print(res + ';\n' + stats + '\\end{tikzpicture}')
+
+def pf_dinv_code(pf):
+	n = len(pf)
+	d = [0]*n
+	for i,j in pf.dinversion_pairs():
+		d[i] += 1
+	return d
+
+def pf_latex(pf, aa = False, dd = False):
+	w = pf.to_labelling_permutation()
+	dw = pf.to_dyck_word()
+	n = len(pf)
+	res = '\\begin{tikzpicture}[scale=0.5]\n'
+	res += '\\draw[dotted] (0,0) grid (%d,%d);\n' % (n,n)
+	res += '\\draw[thick] (0,0)'
+	label = ''
+	stats = ''
+	coord = [0,0]
+	for i in range(2*n):
+		if dw[i] == 1:
+			coord[1] += 1
+			label += '\\draw node at (%f,%f) {%d};\n' % (coord[0]+0.5,coord[1]-0.5, w(coord[1]))
+		if dw[i] == 0:
+			coord[0] += 1
+		res += '--(%d,%d)'% tuple(coord)
+	if aa:
+		stats += '\\draw node at (1,-.5) {%s};\n' % str(pf.to_area_sequence())
+	if dd:
+		stats += '\\draw node at (1,-1.5) {%s};\n' % str(pf_dinv_code(pf))
+	print(res + ';\n' + label + stats + '\\end{tikzpicture}')
