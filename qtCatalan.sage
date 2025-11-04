@@ -79,6 +79,9 @@ class RationalDyckPath:
 	def dinv(self):
 		return len(self.dinv_boxes()[0])
 
+	def reverse(self):
+		return RationalDyckPath([1-i for i in self.DyckWord[::-1]])
+
 	def pp(self) -> None:
 		n = len(self.DyckWord)
 		if n == 0:
