@@ -65,6 +65,15 @@ def pfdinv(pf):
 	n = len(a)
 	return [len([j for j in range(i+1,n) if (a[j] == a[i] and w(j+1) > w(i+1)) or (a[j] == a[i] - 1 and w(j+1) < w(i+1))]) for i in range(n-1)]+[0]
 
+def pfa_code(pf):
+	w = pf.to_labelling_permutation()
+	a = pf.to_area_sequence()
+	n = len(a)
+	t = [0]*n
+	for i in range(n):
+		t[i] += len([j for j in range(n) if a[j] > i])
+	return t
+
 # def test(n):
 # 	t = set()
 # 	for D in DyckWords(n):

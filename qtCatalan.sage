@@ -128,9 +128,10 @@ class RationalDyckPath:
 		return r
 
 	def zeta(self):
-		B = self.rank()
+		dd = self
+		B = dd.rank()
 		sorted_indices = sorted(range(len(B)), key=lambda i: (B[i], -i))
-		rearranged_A = [self.DyckWord[i] for i in sorted_indices]
+		rearranged_A = [dd.DyckWord[i] for i in sorted_indices]
 		return RationalDyckPath(rearranged_A)
 
 	def bounce_v(self):
