@@ -2,7 +2,7 @@ import itertools
 
 class RationalDyckPath:
     def __init__(self, l: list):
-        self.DyckWord = l
+        self.dyckword = l
         self.vertical = sum(l)
         self.horizontal = len(l) - sum(l)
         self.slope = self.vertical/self.horizontal
@@ -11,15 +11,15 @@ class RationalDyckPath:
         self.validate()
 
     def __str__(self):
-        return self.DyckWord.__str__()
+        return self.dyckword.__str__()
 
     def __repr__(self):
-        return self.DyckWord.__repr__()
+        return self.dyckword.__repr__()
 
     def validate(self):
         v = 0
         h = 0
-        for step in self.DyckWord:
+        for step in self.dyckword:
             if step == 1:
                 v += 1
             elif step == 0:
@@ -35,15 +35,15 @@ class RationalDyckPath:
         v = [0] * (self.m - 1) # this will store the v_i's
         i = 0
         flag = 'v'
-        while len(bp) < len(self.DyckWord):
+        while len(bp) < len(self.dyckword):
             if flag == 'v':
                 v.append(0)
                 while i < len(bp):
-                    if self.DyckWord[i] == 1:
+                    if self.dyckword[i] == 1:
                         v[-1] += 1
                         bp.append(1)
                     i += 1
-                while self.DyckWord[i] == 1:
+                while self.dyckword[i] == 1:
                     v[-1] += 1
                     bp.append(1)
                     i += 1
@@ -68,11 +68,12 @@ class RationalDyckPath:
         bp, v = self.bounce_path(return_v=True)
         h = self.h_from_v(v)
         parts = [[] for _ in range(self.m)]
-        columns = to_column_heights(self.DyckWord)
+        columns = to_column_heights(self.dyckword)
         for i, num in enumerate(h):
             new = columns[sum(h[:i]): sum(h[:i]) + num]
             parts[i % self.m].extend(new)
         return [to_binary(part) for part in parts]
+
 
 class DyckTuple:
     def __init__(self, tup: tuple):
@@ -89,8 +90,8 @@ class DyckTuple:
         Returns a list of m lists, where each list contains sublists corresponding to the segments defined.
         """
         bounce_paths = self.get_bounce_paths()
-        bounce_heights = [to_column_heights(bp.DyckWord) for bp in bounce_paths]
-        dp_heights = [to_column_heights(dp.DyckWord) for dp in self.tup]
+        bounce_heights = [to_column_heights(bp.dyckword) for bp in bounce_paths]
+        dp_heights = [to_column_heights(dp.dyckword) for dp in self.tup]
         split_tuple = []
         for i in range(0, self.m):
             bp = bounce_heights[i]
