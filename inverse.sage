@@ -137,6 +137,142 @@ class DyckTuple:
             return True
         return False
 
+def dyck_poset(n):
+    """
+    Returns the poset of Dyck paths of semilength n by inclusion.
+    """
+    youngslattice = posets.YoungsLatticePrincipalOrderIdeal(Partition(list(range(n - 1,0,-1)))).dual()
+    cover_relations = youngslattice.cover_relations()
+    f = {x: x.to_dyck_word(n) for x in youngslattice}
+    new_covers = [[f[x], f[y]] for (x,y) in cover_relations]
+    newposet = Poset((list(f.values()), new_covers))
+    return newposet
+
+def get_roots_under_dp(dw):
+    """
+    Returns a list of 0,1-vectors. Each vector corresponds to an element in the root poset of type A that corresponds to a box that lies under the Dyck path given by dw. Each vector in the returned list has 0s in all positions except for a contiguous interval of 1s; if this interval stretches from index i-1 to index j-1, then the vector corresponds to the root e_i - e_j.
+    """
+    rep = to_column_heights(dw)
+    rep = [rep[i] - i for i in range(len(rep))]
+    n = len(rep)
+    boxes = []
+    for i in range(n):
+        for j in range(1, rep[i]):
+            boxes.append((i + 1, j))
+    vectors = []
+    for (i, j) in boxes:
+        interval_start = i - 1
+        interval_end = i + j - 2
+        vector = [1 if interval_start <= k <= interval_end else 0 for k in range(n-1)]
+        vectors.append(vector)
+    return vectors
+
+def sum_vectors(v1, v2):
+    """
+    Sums two 0-1 vectors component-wise, returning a new vector.
+    """
+    return [v1[i] + v2[i] for i in range(len(v1))]
+
+def find_missing_vectors(existing_vectors, n):
+    """
+    Given a list of 0,1 vectors where 1s form contiguous intervals and there is at least one 1 in each vector,
+    find all possible vectors of the same length with contiguous 1s that are not in the list.
+    """
+    # Generate all possible contiguous interval vectors
+    all_possible = []
+
+    # Generate all contiguous intervals
+    for start in range(n):
+        for end in range(start, n):
+            vector = [0] * n
+            for i in range(start, end + 1):
+                vector[i] = 1
+            all_possible.append(vector)
+
+    # Convert existing vectors to tuples for faster lookup
+    existing_set = set(tuple(v) for v in existing_vectors)
+
+    # Find missing vectors
+    missing = []
+    for vector in all_possible:
+        if tuple(vector) not in existing_set:
+            missing.append(vector)
+
+    return missing
+
+def check_valid_root(vector):
+    """
+    Check if a given 0-1 vector corresponds to a valid root (i.e., is a 0-1 vector with contiguous 1s).
+    """
+    found_one = False
+    found_zero_after_one = False
+    for bit in vector:
+        if bit != 0 and bit != 1:
+            return False
+        if bit == 1:
+            if found_zero_after_one:
+                return False
+            found_one = True
+        else:
+            if found_one:
+                found_zero_after_one = True
+    return found_one
+
+
+def check_filtered(chain):
+    """
+    Check if a given chain of Dyck paths under inclusion satisfies the filtered chain conditions.
+    """
+    roots_chain = []
+    missing_roots_chain = []
+    for dw in chain:
+        roots_chain.append(get_roots_under_dp(dw))
+        missing_roots_chain.append(find_missing_vectors(roots_chain[-1], int(len(dw)/2) - 1))
+    for i in range(len(chain)):
+        for j in range(i, len(chain)):
+            if i + 1 + j + 1 <= len(chain):
+                for box_i in roots_chain[i]:
+                    for box_j in roots_chain[j]:
+                        sum_box = sum_vectors(box_i, box_j)
+                        if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
+                            return False
+            for box_i in missing_roots_chain[i]:
+                    for box_j in missing_roots_chain[j]:
+                        sum_box = sum_vectors(box_i, box_j)
+                        if check_valid_root(sum_box) and sum_box not in missing_roots_chain[min(i + 1 + j + 1 - 1, len(chain) - 1)]:
+                            return False
+    return True
+
+def filtered_dyck_path_chains(m, n):
+    """
+    Returns a list of all filtered m-chains of Dyck paths of semilength n.
+    Each chain is a tuple (P1, ..., Pm) of Dyck paths such that:
+      - the tuple forms an increasing chain in the Dyck path inclusion poset
+      - under the bijection of Dyck paths to order ideals in the root poset of type A, the chain corresponds to a filtered chain of order ideals
+    """
+    from itertools import product
+    poset = dyck_poset(n)
+
+    elements = list(poset)
+
+    chain = []
+    lam = elements[0]
+    filtered_chains = []
+
+    def construct_multichain(lam):
+        nonlocal chain, filtered_chains
+        if len(chain) == m:
+            if check_filtered(chain):
+                filtered_chains.append(chain.copy())
+            return
+        for el in poset.order_filter([lam]):
+            chain.append(el)
+            construct_multichain(el)
+            chain.pop()
+
+    construct_multichain(lam)
+    return filtered_chains
+
 def riffle_lists(lists):
     """
     Riffles a list of lists by taking one element from each list in order.
