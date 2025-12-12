@@ -72,8 +72,7 @@ class RationalDyckPath:
         for i, num in enumerate(h):
             new = columns[sum(h[:i]): sum(h[:i]) + num]
             parts[i % self.m].extend(new)
-        return [to_binary(part) for part in parts]
-
+        return [colheights_to_binary(part) for part in parts]
 
 class DyckTuple:
     def __init__(self, tup: tuple):
@@ -116,7 +115,7 @@ class DyckTuple:
 
         # Check if RationalDyckPath(to_binary(riffled)) raises exception iff prediction is False
         try:
-            result = RationalDyckPath(to_binary(riffled))
+            result = RationalDyckPath(colheight_to_binary(riffled))
             if not prediction:
                 print(f"WARNING: Expected exception but got valid path. Prediction: {prediction}")
                 if warning_counters:
@@ -218,7 +217,6 @@ def check_valid_root(vector):
                 found_zero_after_one = True
     return found_one
 
-
 def check_filtered(chain):
     """
     Check if a given chain of Dyck paths under inclusion satisfies the filtered chain conditions.
@@ -243,7 +241,7 @@ def check_filtered(chain):
                             return False
     return True
 
-def filtered_dyck_path_chains(m, n):
+def filtered_chains(m, n):
     """
     Returns a list of all filtered m-chains of Dyck paths of semilength n.
     Each chain is a tuple (P1, ..., Pm) of Dyck paths such that:
@@ -272,6 +270,25 @@ def filtered_dyck_path_chains(m, n):
 
     construct_multichain(lam)
     return filtered_chains
+
+def area_gluing(tup):
+    """
+    Given an m-tuple of Dyck paths, returns the area vector of the glued m-Dyck path.
+    """
+    m = len(tup)
+    n = len(tup[0]) // 2
+    marea = [0] * n
+    for dw in tup:
+        marea = sum_vectors(marea, DyckWord(dw).to_area_sequence())
+    return marea
+
+def get_area_gluing_map_dict(m, n):
+    chains = filtered_chains(m, n)
+    di = {}
+    for chain in chains:
+        mdw = area_to_binary(area_gluing(chain), m=len(chain))
+        di["".join(map(str, mdw))] = chain
+    return di
 
 def riffle_lists(lists):
     """
@@ -318,7 +335,30 @@ def to_column_heights(dw):
             heights.append(h)
     return heights
 
-def to_binary(heights):
+def area_to_binary(area, m=1):
+    """
+    Converts an area sequence of an m-Dyck path to binary representation of an m-Dyck path.
+    The area sequence gives the area under the path at each step.
+    For an m-Dyck path, the slope is m (m horizontal steps for every 1 vertical step).
+    """
+    n = len(area)
+    # extend with a_{n+1} = 0
+    a_ext = area + [0]
+
+    word = []
+    for i in range(n):
+        # add the i-th up-step
+        word.append(1)
+
+        # number of down-steps forced after this up-step:
+        d_i = m + a_ext[i] - a_ext[i+1]
+
+        word.extend([0] * d_i)
+
+    return word
+
+
+def colheights_to_binary(heights):
     """
     Converts a Dyck path from column heights to binary representation.
     """
@@ -382,6 +422,88 @@ def check(n,m):
     if valid != cat(n, m):
         print(f"Discrepancy found: valid = {valid}, Catalan = {cat(n, m)}")
         raise Exception("Catalan number mismatch")
+
+def dyck_path_to_lines(dyck_path):
+    """
+    Convert a Dyck path's pretty print representation to a list of lines.
+    """
+    from io import StringIO
+    import sys
+
+    # Capture the output of pp()
+    old_stdout = sys.stdout
+    sys.stdout = captured_output = StringIO()
+    DyckWord(dyck_path).pp()
+    sys.stdout = old_stdout
+
+    # Process the captured output to get lines
+    lines = captured_output.getvalue().rstrip().split('\n')
+    return lines
+
+def format_dyck_pairs_side_by_side(dt_paths, chain_paths, n):
+    """
+    Format pairs of Dyck paths side by side.
+    Each pair (dt_path, chain_path) is displayed horizontally next to each other.
+    """
+    result_lines = []
+
+    for i, (dt_path, chain_path) in enumerate(zip(dt_paths, chain_paths)):
+        dt_lines = dyck_path_to_lines(dt_path)
+        chain_lines = dyck_path_to_lines(chain_path)
+
+        # Ensure both have the same number of lines
+        max_lines = max(len(dt_lines), len(chain_lines))
+        while len(dt_lines) < max_lines:
+            dt_lines.append(' ' * n)
+        while len(chain_lines) < max_lines:
+            chain_lines.append(' ' * n)
+
+        # Find the width of each path (pad to n characters)
+        dt_width = max(len(line) for line in dt_lines) if dt_lines else n
+        dt_width = max(dt_width, n)
+
+        # Add pair label
+        if i > 0:
+            result_lines.append("")  # Empty line between pairs
+        result_lines.append(f"Pair {i+1}:")
+
+        # Combine lines side by side
+        for dt_line, chain_line in zip(dt_lines, chain_lines):
+            # Pad dt_line to consistent width
+            padded_dt_line = dt_line.ljust(dt_width)
+            combined_line = padded_dt_line + "   " + chain_line  # 3 spaces between
+            result_lines.append(combined_line)
+
+    return result_lines
+
+def print_mismatched_chains(n,m):
+    di = get_area_gluing_map_dict(m, n)
+
+    # Create output file
+    import os
+    os.makedirs('mismatch', exist_ok=True)
+    filename = f"mismatch/mismatch_{n}_{m}.txt"
+
+    with open(filename, 'w') as f:
+        for mdw in di:
+            binary = list(map(int, list(mdw)))
+            mdp = RationalDyckPath(binary)
+            dt = mdp.split()
+            for i in range(m):
+                if DyckWord(dt[i]).to_area_sequence() != DyckWord(di[mdw][i]).to_area_sequence():
+                    # Write to file instead of printing
+                    f.write(f"{mdw}\n")
+
+                    # Format Dyck paths side by side
+                    formatted_pairs = format_dyck_pairs_side_by_side(dt, di[mdw], n)
+                    for line in formatted_pairs:
+                        f.write(line + '\n')
+
+                    f.write('\n')  # Extra blank line after each mismatch
+                    break
+
+    print(f"Mismatched chains written to {filename}")
+
 
 if __name__ == "__main__":
     pass
