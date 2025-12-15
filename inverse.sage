@@ -271,6 +271,31 @@ def filtered_chains(m, n):
     construct_multichain(lam)
     return filtered_chains
 
+def filtered_chains_generator(m, n):
+    """
+    Generator version that yields filtered m-chains one by one.
+    """
+    from itertools import product
+    poset = dyck_poset(n)
+
+    elements = list(poset)
+
+    chain = []
+    lam = elements[0]
+
+    def construct_multichain(lam):
+        nonlocal chain
+        if len(chain) == m:
+            if check_filtered(chain):
+                yield chain.copy()
+            return
+        for el in poset.order_filter([lam]):
+            chain.append(el)
+            yield from construct_multichain(el)
+            chain.pop()
+
+    yield from construct_multichain(lam)
+
 def area_gluing(tup):
     """
     Given an m-tuple of Dyck paths, returns the area vector of the glued m-Dyck path.
@@ -289,6 +314,16 @@ def get_area_gluing_map_dict(m, n):
         mdw = area_to_binary(area_gluing(chain), m=len(chain))
         di["".join(map(str, mdw))] = chain
     return di
+
+def get_area_gluing_pairs_generator(m, n):
+    """
+    Generator that yields (mdw_string, chain) pairs incrementally.
+    This allows processing without storing all chains in memory.
+    """
+    for chain in filtered_chains_generator(m, n):
+        mdw = area_to_binary(area_gluing(chain), m=len(chain))
+        mdw_string = "".join(map(str, mdw))
+        yield mdw_string, chain
 
 def riffle_lists(lists):
     """
@@ -383,11 +418,6 @@ def generate_tuples(n, m):
     """
     return list(itertools.product(DyckWords(n), repeat=m))
 
-def find(li, i):
-    """
-    Find all indices of i in li."""
-    return [j for j, x in enumerate(li) if x == i]
-
 def cat(n,m=1):
     """
     Compute the (n,m)-Catalan number.
@@ -477,33 +507,62 @@ def format_dyck_pairs_side_by_side(dt_paths, chain_paths, n):
     return result_lines
 
 def print_mismatched_chains(n,m):
-    di = get_area_gluing_map_dict(m, n)
+    import os
 
     # Create output file
-    import os
     os.makedirs('mismatch', exist_ok=True)
     filename = f"mismatch/mismatch_{n}_{m}.txt"
 
+    mismatch_count = 0
+    chain_count = 0
+
+    print(f"Starting search for mismatched chains (n={n}, m={m})...")
+    print(f"Writing results to: {filename}")
+
     with open(filename, 'w') as f:
-        for mdw in di:
-            binary = list(map(int, list(mdw)))
+        f.write(f"Mismatched chains for n={n}, m={m}\n")
+        f.write("=" * 40 + "\n\n")
+        f.flush()
+
+        # Process chains incrementally using generator
+        for mdw_string, chain in get_area_gluing_pairs_generator(m, n):
+            chain_count += 1
+
+            # Print progress every 50 chains
+            if chain_count % 50 == 0:
+                print(f"Processed {chain_count} chains, found {mismatch_count} mismatches...")
+
+            binary = list(map(int, list(mdw_string)))
             mdp = RationalDyckPath(binary)
             dt = mdp.split()
+
+            # Check for mismatches
+            found_mismatch = False
             for i in range(m):
-                if DyckWord(dt[i]).to_area_sequence() != DyckWord(di[mdw][i]).to_area_sequence():
-                    # Write to file instead of printing
-                    f.write(f"{mdw}\n")
-
-                    # Format Dyck paths side by side
-                    formatted_pairs = format_dyck_pairs_side_by_side(dt, di[mdw], n)
-                    for line in formatted_pairs:
-                        f.write(line + '\n')
-
-                    f.write('\n')  # Extra blank line after each mismatch
+                if DyckWord(dt[i]).to_area_sequence() != DyckWord(chain[i]).to_area_sequence():
+                    found_mismatch = True
                     break
 
-    print(f"Mismatched chains written to {filename}")
+            if found_mismatch:
+                mismatch_count += 1
+                # Write mismatch to file immediately
+                f.write(f"Mismatch #{mismatch_count}:\n")
+                f.write(f"{mdw_string}\n")
 
+                # Format Dyck paths side by side
+                formatted_pairs = format_dyck_pairs_side_by_side(dt, chain, n)
+                for line in formatted_pairs:
+                    f.write(line + '\n')
 
+                f.write('\n')  # Extra blank line after each mismatch
+                f.flush()  # Force write to disk immediately
+
+                # Print progress to console immediately
+                print(f"FOUND MISMATCH #{mismatch_count} at chain {chain_count} (mdw: {mdw_string})")
+
+    print(f"\nSearch complete!")
+    print(f"Total chains processed: {chain_count}")
+    print(f"Total mismatched chains found: {mismatch_count}")
+    print(f"Results written to {filename}")
 if __name__ == "__main__":
     pass
