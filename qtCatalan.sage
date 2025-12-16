@@ -120,9 +120,9 @@ class RationalDyckPath:
 		g = gcd(h,v)
 		for i in self.DyckWord:
 			if i == 1:
-				counter += h
+				counter += h // g
 			else:
-				counter -= v
+				counter -= v // g
 			r.append(counter)
 		r.pop()
 		return r

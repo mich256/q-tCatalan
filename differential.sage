@@ -13,7 +13,6 @@ def gen_m(l):
 	R = gen_ring(n)
 	x = R.gens()[:n]
 	y = R.gens()[n:]
-	#return matrix([[x[i]^(l[j][0])*y[i]^(l[j][1]) for j in range(n)] for i in range(n)])
 	return matrix([[x[i]^(l[j][0])*y[i]^(l[j][1]) for j in range(n)] for i in range(n)])
 
 def gen_det(l):
@@ -28,22 +27,28 @@ def gen_ideal(n):
 def comp(a,b):
 	return lambda x: a(b(x))
 
-def E(p,n):
-	R = gen_ring(n)
-	x = R.gens()[:n]
-	y = R.gens()[n:]
-	return lambda f: sum(y[j] * f.derivative(x[j], p) for j in range(n))
+def E(p,f):
+	n = f.parent().ngens()//2
+	x = f.parent().gens()[:n]
+	y = f.parent().gens()[n:]
+	return sum(y[j] * f.derivative(x[j], p) for j in range(n))
+
+def dualE(p,f):
+	n = f.parent().ngens()//2
+	x = f.parent().gens()[:n]
+	y = f.parent().gens()[n:]
+	return sum(x[j]^p * f.derivative(y[j]) for j in range(n))
 
 def applyE(l,n):
 	temp = vand(n)
 	for i in sorted(l):
-		temp = E(i,n)(temp)
-	return factor(temp/(temp.coefficients()[0][0]))
+		temp = E(i,temp)
+	return temp
 
 def psm(mu,n):
 	temp = vand(n)
 	for i in mu:
-		temp = E(i,n)(temp)
+		temp = E(i,temp)
 	return temp
 
 Sym = SymmetricFunctions(QQ)
@@ -87,7 +92,6 @@ def normalcat(n):
 	for D in DyckWords(n):
 		a = D.to_area_sequence()
 		aa = dinv_code(D)
-		# t.append(list(zip(a,aa)))
 		temp = gen_det(list(zip(a,aa)))
 		t.append(temp)
 	return t
