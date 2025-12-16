@@ -45,6 +45,21 @@ def applyE(l,n):
 		temp = E(i,temp)
 	return temp
 
+def apdualE(l,f):
+	temp = f
+	for i in sorted(l):
+		temp = dualE(i,temp)
+	return temp
+
+def test_diff(n):
+	load('sign-character.sage')
+	I = ideal(vand(n))
+	for D in DyckWords(n):
+		f = basD(D)
+		for mu in Partitions(binomial(n,2)-D.dinv(),length=D.area(),max_part=n-1):
+			assert apdualE(mu,f) in I
+	return True
+
 def psm(mu,n):
 	temp = vand(n)
 	for i in mu:

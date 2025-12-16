@@ -41,6 +41,9 @@ def normalcat(n):
 			t.append(temp)
 	return t
 
+def basD(D):
+	return gen_det(list(zip(dinv_code(D),D.to_area_sequence())))
+
 def pf(D):
 	s = D.to_area_sequence()
 	n = len(s)
