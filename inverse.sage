@@ -166,6 +166,27 @@ def get_roots_under_dp(dw):
         vectors.append(vector)
     return vectors
 
+def get_boxes_under_dp(dw):
+    """
+    Returns a list of boxes (i,j) that lie under the Dyck path given by dw.
+    Each box is represented as a tuple (i,j) where i is the column index (1-based) and j is the row index (1-based).
+    """
+    rep = to_column_heights(dw)
+    rep = [rep[i] - i - 1 for i in range(len(rep))]
+    n = len(rep)
+    boxes = []
+    for i in range(n):
+        for j in range(1, rep[i] + 1):
+            boxes.append((i + 1, j + i + 1))
+    return boxes
+
+def m_catalan(n,m):
+    """
+    Compute the (n,m)-Catalan number.
+    """
+    from sage.all import binomial
+    return binomial((m+1)*n, n) // ((m*n)+1)
+
 def sum_vectors(v1, v2):
     """
     Sums two 0-1 vectors component-wise, returning a new vector.
@@ -238,6 +259,25 @@ def check_filtered(chain):
                     for box_j in missing_roots_chain[j]:
                         sum_box = sum_vectors(box_i, box_j)
                         if check_valid_root(sum_box) and sum_box not in missing_roots_chain[min(i + 1 + j + 1 - 1, len(chain) - 1)]:
+                            return False
+    return True
+
+def check_out_box_filtered(chain):
+    """
+    Check if a given tuple of Dyck paths satisfies the second filtered chain condition involving the boxes outside the Dyck paths.
+    """
+    roots_chain = []
+    missing_roots_chain = []
+    for dw in chain:
+        roots_chain.append(get_roots_under_dp(dw))
+        missing_roots_chain.append(find_missing_vectors(roots_chain[-1], int(len(dw)/2) - 1))
+    for i in range(len(chain)):
+        for j in range(i, len(chain)):
+            for box_i in missing_roots_chain[i]:
+                    for box_j in missing_roots_chain[j]:
+                        sum_box = sum_vectors(box_i, box_j)
+                        if check_valid_root(sum_box) and sum_box not in missing_roots_chain[min(i + 1 + j + 1 - 1, len(chain) - 1)]:
+                            print(i, j, box_i, box_j, sum_box, (i + 1 + j + 1 - 1) % len(chain))
                             return False
     return True
 
@@ -418,6 +458,76 @@ def generate_tuples(n, m):
     """
     return list(itertools.product(DyckWords(n), repeat=m))
 
+def generate_m_Dyck_paths(n, m):
+    """
+    Generate all m-Dyck paths of height n.
+    """
+    from sage.combinat.tamari_lattices import GeneralizedTamariLattice
+    return list(GeneralizedTamariLattice(n * m, m))
+
+def random_m_Dyck_path(n, m):
+    """
+    Generate a random m-Dyck path of height n using uniform random walk construction.
+
+    Args:
+        n: height of the path
+        m: slope parameter (m horizontal steps for each vertical step)
+
+    Returns:
+        A random m-Dyck path as a binary list
+    """
+    import random
+
+    # We need n up-steps and m*n down-steps
+    total_steps = n * (m + 1)
+    up_steps = n
+    down_steps = m * n
+
+    path = []
+    current_height = 0
+
+    # Build path step by step, respecting the constraint that we never go below the line y = x/m
+    for step_num in range(total_steps):
+        remaining_steps = total_steps - step_num
+        remaining_up = up_steps - sum(path)  # Number of 1s added so far
+        remaining_down = down_steps - (step_num - sum(path))  # Number of 0s added so far
+
+        # Calculate current position
+        steps_so_far = len(path)
+        current_up = sum(path)
+        current_down = steps_so_far - current_up
+
+        # Check if we can add an up-step without violating constraints later
+        can_go_up = (remaining_up > 0) and (current_down * 1 <= (current_up + 1) * m)
+
+        # Check if we can add a down-step without going below the line
+        can_go_down = (remaining_down > 0) and ((current_down + 1) * 1 <= current_up * m)
+
+        # If we must take remaining up steps
+        if remaining_down == 0:
+            path.append(1)
+        # If we must take remaining down steps
+        elif remaining_up == 0:
+            path.append(0)
+        # If both are possible, choose randomly
+        elif can_go_up and can_go_down:
+            path.append(random.choice([0, 1]))
+        # If only up is possible
+        elif can_go_up:
+            path.append(1)
+        # If only down is possible
+        elif can_go_down:
+            path.append(0)
+        else:
+            # This shouldn't happen in a well-constructed algorithm
+            # Fall back to completing with required steps
+            if remaining_up > 0:
+                path.append(1)
+            else:
+                path.append(0)
+
+    return path
+
 def cat(n,m=1):
     """
     Compute the (n,m)-Catalan number.
@@ -506,7 +616,7 @@ def format_dyck_pairs_side_by_side(dt_paths, chain_paths, n):
 
     return result_lines
 
-def print_mismatched_chains(n,m):
+def print_mismatched_chains(n,m, check_gravity_falls=True):
     import os
 
     # Create output file
@@ -553,6 +663,10 @@ def print_mismatched_chains(n,m):
                 formatted_pairs = format_dyck_pairs_side_by_side(dt, chain, n)
                 for line in formatted_pairs:
                     f.write(line + '\n')
+                if check_gravity_falls:
+                    if [set(li) for li in gravity_falls([get_boxes_under_dp(dw) for dw in dt])] != [set(li) for li in [get_boxes_under_dp(dw) for dw in chain]]:
+                        print(f"Gravity falls check failed for mismatch #{mismatch_count} at chain {chain} (mdw: {dt})")
+                        f.write("Gravity falls check FAILED!\n")
 
                 f.write('\n')  # Extra blank line after each mismatch
                 f.flush()  # Force write to disk immediately
@@ -564,5 +678,210 @@ def print_mismatched_chains(n,m):
     print(f"Total chains processed: {chain_count}")
     print(f"Total mismatched chains found: {mismatch_count}")
     print(f"Results written to {filename}")
+
+def print_matched_chains(n,m, check_gravity_falls=True):
+    import os
+
+    # Create output file
+    os.makedirs('match', exist_ok=True)
+    filename = f"match/match_{n}_{m}.txt"
+
+    mismatch_count = 0
+    chain_count = 0
+
+    print(f"Starting search for mismatched chains (n={n}, m={m})...")
+    print(f"Writing results to: {filename}")
+
+    with open(filename, 'w') as f:
+        f.write(f"Mismatched chains for n={n}, m={m}\n")
+        f.write("=" * 40 + "\n\n")
+        f.flush()
+
+        # Process chains incrementally using generator
+        for mdw_string, chain in get_area_gluing_pairs_generator(m, n):
+            chain_count += 1
+
+            # Print progress every 50 chains
+            if chain_count % 50 == 0:
+                print(f"Processed {chain_count} chains, found {mismatch_count} mismatches...")
+
+            binary = list(map(int, list(mdw_string)))
+            mdp = RationalDyckPath(binary)
+            dt = mdp.split()
+
+            # Check for mismatches
+            found_mismatch = False
+            for i in range(m):
+                if DyckWord(dt[i]).to_area_sequence() == DyckWord(chain[i]).to_area_sequence():
+                    found_mismatch = True
+                    break
+
+            if found_mismatch:
+                mismatch_count += 1
+                # Write mismatch to file immediately
+                f.write(f"Mismatch #{mismatch_count}:\n")
+                f.write(f"{mdw_string}\n")
+
+                # Format Dyck paths side by side
+                formatted_pairs = format_dyck_pairs_side_by_side(dt, chain, n)
+                for line in formatted_pairs:
+                    f.write(line + '\n')
+                if check_gravity_falls:
+                    if [set(li) for li in gravity_falls([get_boxes_under_dp(dw) for dw in dt])] != [set(li) for li in [get_boxes_under_dp(dw) for dw in chain]]:
+                        print(f"Gravity falls check failed for mismatch #{mismatch_count} at chain {chain} (mdw: {dt})")
+                        f.write("Gravity falls check FAILED!\n")
+
+                f.write('\n')  # Extra blank line after each mismatch
+                f.flush()  # Force write to disk immediately
+
+                # Print progress to console immediately
+                print(f"FOUND MISMATCH #{mismatch_count} at chain {chain_count} (mdw: {mdw_string})")
+
+    print(f"\nSearch complete!")
+    print(f"Total chains processed: {chain_count}")
+    print(f"Total mismatched chains found: {mismatch_count}")
+    print(f"Results written to {filename}")
+
+
+def gravity_falls(tup):
+    """
+    Stack the Dyck paths represented in tup and move boxes between them by letting them fall down.
+    If a tuple exists in list i but not in list j for j > i,
+    move it to the largest such j.
+
+    Args:
+        tup: List of lists, where the ith list contains tuples representing boxes under the ith Dyck path and above the diagonal
+
+    Returns:
+        The modified original list after letting the boxes "fall" to the bottom.
+
+    CONJECTURE: The resulting list of Dyck paths is always a filtered chain.
+    """
+    n = len(tup)
+
+    # Process each list from first to second-to-last
+    for i in range(n - 1):
+        tuples_to_move = []
+
+        # Check each tuple in the current list
+        for tuple_item in tup[i][:]:  # Use slice to avoid modification during iteration
+            # Find the largest j > i where this tuple doesn't exist
+            target_j = None
+
+            # Check from the end backwards to find the largest valid j
+            for j in range(n - 1, i, -1):
+                if tuple_item not in tup[j]:
+                    target_j = j
+                    break
+
+            # If we found a target list, move the tuple there
+            if target_j is not None:
+                tuples_to_move.append((tuple_item, target_j))
+
+        # Actually move the tuples
+        for tuple_item, target_j in tuples_to_move:
+            tup[i].remove(tuple_item)
+            tup[target_j].append(tuple_item)
+
+    return tup
+
+def print_out_box_violating_bounce_chains(n, m):
+    import os
+
+    # Create output file
+    os.makedirs('out_box_violations', exist_ok=True)
+    filename = f"out_box_violations/out_box_violations_{n}_{m}.txt"
+
+    mismatch_count = 0
+    chain_count = 0
+
+    print(f"Writing results to: {filename}")
+
+    with open(filename, 'w') as f:
+        f.write(f"Chains violating the out-box filtered chain condition for n={n}, m={m}\n")
+        f.write("=" * 40 + "\n\n")
+        f.flush()
+
+        # Process chains incrementally using generator
+        for mdw_string, chain in get_area_gluing_pairs_generator(m, n):
+            chain_count += 1
+
+            # Print progress every 50 chains
+            if chain_count % 50 == 0:
+                print(f"Processed {chain_count} chains, found {mismatch_count} violations...")
+
+            binary = list(map(int, list(mdw_string)))
+            mdp = RationalDyckPath(binary)
+            dt = mdp.split()
+
+            if not check_out_box_filtered(chain):
+                mismatch_count += 1
+                # Write mismatch to file immediately
+                f.write(f"Violation #{mismatch_count}:\n")
+                f.write(f"{mdw_string}\n")
+
+                # Format Dyck paths side by side
+                formatted_pairs = format_dyck_pairs_side_by_side(dt, chain, n)
+                for line in formatted_pairs:
+                    f.write(line + '\n')
+
+                f.write('\n')  # Extra blank line after each mismatch
+                f.flush()  # Force write to disk immediately
+
+                # Print progress to console immediately
+                print(f"FOUND VIOLATION #{mismatch_count} at chain {chain_count} (mdw: {mdw_string})")
+
+    print(f"\nSearch complete!")
+    print(f"Total chains processed: {chain_count}")
+    print(f"Total mismatched chains found: {mismatch_count}")
+    print(f"Results written to {filename}")
+
+def print_out_box_violating_chains(n, m, chains):
+    import os
+
+    # Create output file
+    os.makedirs('out_box_violations_general', exist_ok=True)
+    filename = f"out_box_violations_general/out_box_violations_general_{n}_{m}.txt"
+
+    mismatch_count = 0
+    chain_count = 0
+
+    print(f"Writing results to: {filename}")
+
+    with open(filename, 'w') as f:
+        f.write(f"Chains violating the out-box filtered chain condition for n={n}, m={m}\n")
+        f.write("=" * 40 + "\n\n")
+        f.flush()
+
+        # Process chains incrementally using generator
+        for chain in chains:
+            chain_count += 1
+
+            # Print progress every 50 chains
+            if chain_count % 50 == 0:
+                print(f"Processed {chain_count} chains, found {mismatch_count} violations...")
+
+
+            if not check_out_box_filtered(chain):
+                mismatch_count += 1
+                # Write mismatch to file immediately
+                f.write(f"Violation #{mismatch_count}:\n")
+
+                # Format Dyck paths side by side
+                formatted_pairs = format_dyck_pairs_side_by_side(chain, chain, n)
+                for line in formatted_pairs:
+                    f.write(line + '\n')
+
+                f.write('\n')  # Extra blank line after each mismatch
+                f.flush()  # Force write to disk immediately
+
+                # Print progress to console immediately
+                print(f"FOUND VIOLATION #{mismatch_count} at chain {chain_count}")
+
+    print(f"\nSearch complete!")
+    print(f"Total chains processed: {chain_count}")
+    print(f"Total mismatched chains found: {mismatch_count}")
+    print(f"Results written to {filename}")
+
 if __name__ == "__main__":
     pass
