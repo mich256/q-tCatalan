@@ -1,5 +1,9 @@
 import itertools
 
+# Examples
+# IN_BOX_VIOLATING_CHAIN = [
+NON_FILTERED_CHAIN = [[1,1,0,1,0,1,0,0,], [1,1,1,0,0,0,1,0], [1,1,1,0,0,0,1,0], [1,1,1,0,0,1,0,0]]
+
 class RationalDyckPath:
     def __init__(self, l: list):
         self.dyckword = l
@@ -180,6 +184,27 @@ def get_boxes_under_dp(dw):
             boxes.append((i + 1, j + i + 1))
     return boxes
 
+def dp_from_boxes(boxes, n):
+    """
+    Reconstruct Dyck path given boxes under the Dyck path and return in 0-1 format.
+    Note that this function assumes that the boxes correspond to a valid Dyck path.
+    """
+    col_heights = [i for i in range(1, n + 1)]
+    for (i, j) in boxes:
+        col_heights[i - 1] = max(col_heights[i - 1], j)
+    return colheights_to_binary(col_heights)
+
+def box_from_root(root):
+    """
+    Given a root vector of length n-1 with contiguous 1s from index i-1 to j-1, return the corresponding box (i,j+1).
+    """
+    interval_indices = [index for index, value in enumerate(root) if value == 1]
+    if not interval_indices:
+        raise Exception("Root vector must have at least one '1'")
+    i = interval_indices[0] + 1
+    j = interval_indices[-1] + 1
+    return (i, j + 1)
+
 def m_catalan(n,m):
     """
     Compute the (n,m)-Catalan number.
@@ -241,6 +266,7 @@ def check_valid_root(vector):
 def check_filtered(chain):
     """
     Check if a given chain of Dyck paths under inclusion satisfies the filtered chain conditions.
+    Note that this function assumes that inclusion is already satisfied.
     """
     roots_chain = []
     missing_roots_chain = []
@@ -264,7 +290,7 @@ def check_filtered(chain):
 
 def check_out_box_filtered(chain):
     """
-    Check if a given tuple of Dyck paths satisfies the second filtered chain condition involving the boxes outside the Dyck paths.
+    Check if a given tuple of Dyck paths satisfies the second filtered chain condition involving the boxes outside the Dyck paths. (This is the same as the function `check_filtered` with the first loop removed)
     """
     roots_chain = []
     missing_roots_chain = []
@@ -280,6 +306,25 @@ def check_out_box_filtered(chain):
                             print(i, j, box_i, box_j, sum_box, (i + 1 + j + 1 - 1) % len(chain))
                             return False
     return True
+
+def check_in_box_filtered(chain, return_witness=False):
+    """
+    Check if a given chain of Dyck paths under inclusion satisfies the filtered chain condition involving the boxes inside the Dyck paths. (This is the almost the same as the function `check_filtered` with the second loop removed.)
+    """
+    roots_chain = []
+    missing_roots_chain = []
+    for dw in chain:
+        roots_chain.append(get_roots_under_dp(dw))
+        missing_roots_chain.append(find_missing_vectors(roots_chain[-1], int(len(dw)/2) - 1))
+    for i in range(len(chain)):
+        for j in range(i, len(chain)):
+            if i + 1 + j + 1 <= len(chain):
+                for box_i in roots_chain[i]:
+                    for box_j in roots_chain[j]:
+                        sum_box = sum_vectors(box_i, box_j)
+                        if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
+                            return False, (i, j, box_from_root(box_i), box_from_root(box_j)) if return_witness else False
+    return (True, None) if return_witness else True
 
 def filtered_chains(m, n):
     """
@@ -620,8 +665,8 @@ def print_mismatched_chains(n,m, check_gravity_falls=True):
     import os
 
     # Create output file
-    os.makedirs('mismatch', exist_ok=True)
-    filename = f"mismatch/mismatch_{n}_{m}.txt"
+    os.makedirs('slide_mismatch', exist_ok=True)
+    filename = f"slide_mismatch/mismatch_{n}_{m}.txt"
 
     mismatch_count = 0
     chain_count = 0
@@ -664,9 +709,9 @@ def print_mismatched_chains(n,m, check_gravity_falls=True):
                 for line in formatted_pairs:
                     f.write(line + '\n')
                 if check_gravity_falls:
-                    if [set(li) for li in gravity_falls([get_boxes_under_dp(dw) for dw in dt])] != [set(li) for li in [get_boxes_under_dp(dw) for dw in chain]]:
-                        print(f"Gravity falls check failed for mismatch #{mismatch_count} at chain {chain} (mdw: {dt})")
-                        f.write("Gravity falls check FAILED!\n")
+                    if slip_n_slide(dt) != chain:
+                        print(f"Slip n slide check failed for mismatch #{mismatch_count} at chain {chain} (mdw: {dt})")
+                        f.write("Slip n slide check FAILED!\n")
 
                 f.write('\n')  # Extra blank line after each mismatch
                 f.flush()  # Force write to disk immediately
@@ -784,6 +829,41 @@ def gravity_falls(tup):
             tup[target_j].append(tuple_item)
 
     return tup
+
+def slide(chain):
+    """
+    Given a chain of Dyck paths, perform the gravity falls and then the slide operation on it.
+    """
+    boxes_list = [get_boxes_under_dp(dw) for dw in chain]
+    new_boxes_list = gravity_falls(boxes_list)
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
+    success, witness = check_in_box_filtered(new_chain, return_witness=True)
+    if success:
+        return new_chain
+    # recall: witness = (i, j, box_i, box_j) where box_i and box_j are (col, row) tuples
+    right_box_index = 1 if witness[2][0] <= witness[3][0] else 0
+    right_box = witness[2 + right_box_index]
+    right_box_dp = witness[right_box_index]
+    sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
+
+    while gravity_falls(sliding_boxes_list) == new_boxes_list:
+        sliding_boxes_list[right_box_dp].remove(right_box)
+        right_box = (right_box[0] - 1, right_box[1])
+        sliding_boxes_list[right_box_dp].append(right_box) # slide left
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
+
+    return new_chain
+
+def slip_n_slide(chain):
+    """
+    Given a chain of Dyck paths, perform the gravity falls and slide operation repeatedly until it stabilizes.
+    """
+    previous_chain = chain
+    while True:
+        new_chain = slide(previous_chain)
+        if new_chain == previous_chain:
+            return new_chain
+        previous_chain = new_chain
 
 def print_out_box_violating_bounce_chains(n, m):
     import os
