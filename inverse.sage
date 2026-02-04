@@ -503,18 +503,37 @@ def filtered_chains_generator(m, n):
     """
     Generator version that yields filtered m-chains one by one.
     """
-    from itertools import product
+    import time
+
+    print(f"Starting filtered_chains_generator for m={m}, n={n}")
+    start_time = time.time()
+
+    poset_start = time.time()
     poset = dyck_poset(n)
+    poset_time = time.time() - poset_start
+    print(f"Built Dyck poset in {poset_time:.2f} seconds")
 
     elements = list(poset)
 
     chain = []
     lam = elements[0]
 
+    chains_generated = 0
+    last_checkpoint_time = time.time()
+
+    batch_size = 100
+
     def construct_multichain(lam):
-        nonlocal chain
+        nonlocal chain, chains_generated, last_checkpoint_time
         if len(chain) == m:
             if check_filtered(chain):
+                chains_generated += 1
+                if chains_generated % batch_size == 0:
+                    current_time = time.time()
+                    batch_time = current_time - last_checkpoint_time
+                    total_time = current_time - start_time
+                    print(f"Generated {chains_generated} filtered chains so far... (Last {batch_size} took {batch_time:.2f}s, Total time: {total_time:.2f}s)")
+                    last_checkpoint_time = current_time
                 yield chain.copy()
             return
         for el in poset.order_filter([lam]):
@@ -523,6 +542,48 @@ def filtered_chains_generator(m, n):
             chain.pop()
 
     yield from construct_multichain(lam)
+
+def area_gluing_inverse(mdw):
+    """
+    Given an m-Dyck path in binary representation, returns the m-tuple of Dyck paths obtained by splitting it according to its area.
+    """
+    import time
+
+    if type(mdw) == list:
+        m = int((len(mdw) - sum(mdw)) / sum(mdw))
+        n = sum(mdw)
+    else:
+        m = mdw.m
+        n = mdw.n
+        mdw = mdw.dyckword
+        assert(type(mdw) == list)
+    areaseq = binary_to_areaseq(mdw)
+    print("areaseq is ", areaseq)
+    i = 0
+    mcat = m_catalan(n, m)
+    print("Total number of filtered chains to check: ", mcat)
+    batch_size = 100
+
+    start_time = time.time()
+    last_checkpoint_time = start_time
+
+    for chain in filtered_chains_generator(m, n):
+        i += 1
+        # print(chain)
+        # print(area_gluing(chain))
+        glued = area_gluing(chain)
+        # print(glued)
+        if glued == areaseq:
+            total_time = time.time() - start_time
+            print(f"Found matching chain after checking {i+1} chains in {total_time:.2f} seconds")
+            return chain
+
+        if i % batch_size == 0:
+            current_time = time.time()
+            batch_time = current_time - last_checkpoint_time
+            total_time = current_time - start_time
+            print(f"Checked {i} chains so far... (Last {batch_size} took {batch_time:.2f}s, Total time: {total_time:.2f}s)")
+            last_checkpoint_time = current_time
 
 def area_gluing(tup):
     """
@@ -536,7 +597,7 @@ def area_gluing(tup):
     return marea
 
 def get_area_gluing_map_dict(m, n):
-    chains = filtered_chains(m, n)
+    chains = filtered_chains_generator(m, n)
     di = {}
     for chain in chains:
         mdw = area_to_binary(area_gluing(chain), m=len(chain))
