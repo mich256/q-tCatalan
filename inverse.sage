@@ -5,6 +5,7 @@ from typing import Union
 # IN_BOX_VIOLATING_CHAIN = [
 NON_FILTERED_CHAIN = [[1,1,0,1,0,1,0,0,], [1,1,1,0,0,0,1,0], [1,1,1,0,0,0,1,0], [1,1,1,0,0,1,0,0]]
 
+
 class RationalDyckPath:
     def __init__(self, l: Union[list, str]):
         self.dyckword = l if type(l) == list else string_to_chain(l)[0]
@@ -73,7 +74,7 @@ class RationalDyckPath:
         bp, v = self.bounce_path(return_v=True)
         h = self.h_from_v(v)
         parts = [[] for _ in range(self.m)]
-        columns = to_column_heights(self.dyckword)
+        columns = to_colheights(self.dyckword)
         for i, num in enumerate(h):
             new = columns[sum(h[:i]): sum(h[:i]) + num]
             parts[i % self.m].extend(new)
@@ -81,6 +82,126 @@ class RationalDyckPath:
 
     def areaseq(self):
         return binary_to_areaseq(self.dyckword)
+
+class DyckTuple:
+    def __init__(self, tup: tuple):
+        self.tup = tuple(RationalDyckPath(dp) for dp in tup)
+        self.m = len(tup)
+        self.n = len(tup[0]) // 2
+
+    def get_bounce_paths(self):
+        return [dp.bounce_path() for dp in self.tup]
+
+    def split(self):
+        """
+        Splits each Dyck path in the m-tuple according to its bounce path.
+        Returns a list of m lists, where each list contains sublists corresponding to the segments defined.
+        """
+        bounce_paths = self.get_bounce_paths()
+        bounce_heights = [to_colheights(bp.dyckword) for bp in bounce_paths]
+        dp_heights = [to_colheights(dp.dyckword) for dp in self.tup]
+        split_tuple = []
+        for i in range(0, self.m):
+            bp = bounce_heights[i]
+            curr_height = 0
+            li = []
+            for j, height in enumerate(bp):
+                if height == curr_height:
+                    li[-1].append(dp_heights[i][j])
+                else:
+                    li.append([dp_heights[i][j]])
+                curr_height = height
+            split_tuple.append(li)
+        return split_tuple
+
+    def glue(self):
+        """
+        Glues the m-tuple of Dyck paths into an m-Dyck path (in the bounce path way).
+        """
+        split_tuple = self.split()
+        riffled = riffle_lists(split_tuple)
+        result = RationalDyckPath(colheights_to_binary(riffled))
+        return result
+
+
+def riffle_lists(lists):
+    """
+    Riffles a list of lists by taking one element from each list in order.
+    Example: [[[1], [3, 3], [4]], [[2, 2], [3], [4]], [[2, 3], [3], [4]]]
+    gives [1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4]"""
+    # Transpose the lists, filling missing values with empty lists
+    transposed = itertools.zip_longest(*lists, fillvalue=[])
+    # Flatten each group and then flatten the entire result
+    return list(itertools.chain.from_iterable(itertools.chain.from_iterable(group) for group in transposed))
+
+def string_to_chain(s):
+    """
+    Converts a string representation of a chain of Dyck paths into a list of Dyck paths in 0-1 format.
+    Example input: "11010000, 11100000, 11101000"
+    """
+    parts = s.split(',')
+    chain = []
+    for part in parts:
+        dw_str = part.strip()
+        dw = [int(c) for c in dw_str]
+        chain.append(dw)
+    return chain
+
+def sum_vectors(v1, v2):
+    """
+    Sums two 0-1 vectors component-wise, returning a new vector.
+    """
+    return [v1[i] + v2[i] for i in range(len(v1))]
+
+def primes(dw):
+    """
+    Splits a Dyck word into its prime components.
+    """
+    m = int((len(dw) - sum(dw)) / sum(dw))
+    primes = []
+    h = 0
+    v = 0
+    for step in dw:
+        if step == 1:
+            v += 1
+        else:
+            h += 1
+        if v * m == h:
+            primes.append(dw[:h + v])
+            dw = dw[h + v:]
+            h = 0
+            v = 0
+    return primes
+
+def m_catalan(n,m=1):
+    """
+    Compute the (n,m)-Catalan number.
+    """
+    from sage.all import binomial
+    return binomial((m+1)*n, n) // ((m*n)+1)
+
+
+def areaseq_to_binary(area, m=1):
+    """
+    Converts an area sequence of an m-Dyck path to binary representation of an m-Dyck path.
+    The area sequence gives the area under the path at each step.
+    For an m-Dyck path, the slope is m (m horizontal steps for every 1 vertical step).
+    """
+    n = len(area)
+    # extend with a_{n+1} = 0
+    a_ext = area + [0]
+
+    word = []
+    for i in range(n):
+        # add the i-th up-step
+        word.append(1)
+
+        # number of down-steps forced after this up-step:
+        d_i = m + a_ext[i] - a_ext[i+1]
+
+        word.extend([0] * d_i)
+
+    return word
 
 def binary_to_areaseq(bin):
     """
@@ -99,103 +220,66 @@ def binary_to_areaseq(bin):
             h += 1
     return area_seq
 
-class DyckTuple:
-    def __init__(self, tup: tuple):
-        self.tup = tuple(RationalDyckPath(dp) for dp in tup)
-        self.m = len(tup)
-        self.n = len(tup[0]) // 2
-
-    def get_bounce_paths(self):
-        return [dp.bounce_path() for dp in self.tup]
-
-    def split(self):
-        """
-        Splits each Dyck path in the m-tuple according to its bounce path.
-        Returns a list of m lists, where each list contains sublists corresponding to the segments defined.
-        """
-        bounce_paths = self.get_bounce_paths()
-        bounce_heights = [to_column_heights(bp.dyckword) for bp in bounce_paths]
-        dp_heights = [to_column_heights(dp.dyckword) for dp in self.tup]
-        split_tuple = []
-        for i in range(0, self.m):
-            bp = bounce_heights[i]
-            curr_height = 0
-            li = []
-            for j, height in enumerate(bp):
-                if height == curr_height:
-                    li[-1].append(dp_heights[i][j])
-                else:
-                    li.append([dp_heights[i][j]])
-                curr_height = height
-            split_tuple.append(li)
-        return split_tuple
-
-    def glue(self, warning_counters=None):
-        """
-        Glues the m-tuple of Dyck paths into an m-Dyck path (in the bounce path way).
-        """
-        split_tuple = self.split()
-        riffled = riffle_lists(split_tuple)
-        prediction = self.predict(riffled)
-
-        # Check if RationalDyckPath(to_binary(riffled)) raises exception iff prediction is False
-        try:
-            result = RationalDyckPath(colheights_to_binary(riffled))
-            if not prediction:
-                print(f"WARNING: Expected exception but got valid path. Prediction: {prediction}")
-                if warning_counters:
-                    warning_counters['false_negative'] += 1
-            return result
-        except Exception as e:
-            if prediction:
-                print(f"WARNING: Expected valid path but got exception. Prediction: {prediction}, Exception: {e}")
-                if warning_counters:
-                    warning_counters['false_positive'] += 1
-            raise e
-
-    def predict(self, riffled):
-        """
-        Predicts whether this m-tuple of Dyck paths can be glued into a valid m-Dyck path.
-        """
-        if sorted(riffled) == riffled:
-            return True
-        return False
-
-def dyck_poset(n):
+def colheights_to_binary(heights):
     """
-    Returns the poset of Dyck paths of semilength n by inclusion.
+    Converts a Dyck path from column heights to binary representation.
     """
-    youngslattice = posets.YoungsLatticePrincipalOrderIdeal(Partition(list(range(n - 1,0,-1)))).dual()
-    cover_relations = youngslattice.cover_relations()
-    f = {x: x.to_dyck_word(n) for x in youngslattice}
-    new_covers = [[f[x], f[y]] for (x,y) in cover_relations]
-    newposet = Poset((list(f.values()), new_covers))
-    return newposet
+    check_valid_colheights(heights)
+    dw = [1] * heights[0] + [0]
+    for i, height in enumerate(heights[1:]):
+        i = i + 1
+        dw.extend([1] * (height - heights[i - 1]))
+        dw.append(0)
+    return dw
 
-def string_to_chain(s):
+def to_colheights(dw):
     """
-    Converts a string representation of a chain of Dyck paths into a list of Dyck paths in 0-1 format.
-    Example input: "11010000, 11100000, 11101000"
-    """
-    parts = s.split(',')
-    chain = []
-    for part in parts:
-        dw_str = part.strip()
-        dw = [int(c) for c in dw_str]
-        chain.append(dw)
-    return chain
+    Converts a Dyck path to column heights representation.
 
-def mdp_to_mdt(mdp):
+    The height of column i in a Dyck path is the number of boxes beneath its ith horizontal step when the Dyck path is drawn in a rectangular grid.
     """
-    Converts an m-Dyck path in 0-1 format into an m-tuple of Dyck paths in 0-1 format.
+    if dw[0] == 0:
+        dw = areaseq_to_binary(dw, m=1)
+    heights = []
+    h = 0
+    for step in dw:
+        if step == 1:
+            h += 1
+        if step == 0:
+            heights.append(h)
+    return heights
+
+def check_valid_colheights(heights):
     """
-    return RationalDyckPath(string_to_chain(mdp)[0]).split()
+    Check if a list is a valid column heights representation of a Dyck path.
+    """
+    if not heights == sorted(heights):
+        raise Exception('Heights must be non-decreasing')
+
+
+def check_valid_root(vector):
+    """
+    Check if a given 0-1 vector corresponds to a valid root (i.e., is a 0-1 vector with contiguous 1s).
+    """
+    found_one = False
+    found_zero_after_one = False
+    for bit in vector:
+        if bit != 0 and bit != 1:
+            return False
+        if bit == 1:
+            if found_zero_after_one:
+                return False
+            found_one = True
+        else:
+            if found_one:
+                found_zero_after_one = True
+    return found_one
 
 def get_roots_under_dp(dw):
     """
     Returns a list of 0,1-vectors. Each vector corresponds to an element in the root poset of type A that corresponds to a box that lies under the Dyck path given by dw. Each vector in the returned list has 0s in all positions except for a contiguous interval of 1s; if this interval stretches from index i-1 to index j-1, then the vector corresponds to the root e_i - e_j.
     """
-    rep = to_column_heights(dw)
+    rep = to_colheights(dw)
     rep = [rep[i] - i for i in range(len(rep))]
     n = len(rep)
     boxes = []
@@ -215,7 +299,7 @@ def get_boxes_under_dp(dw):
     Returns a list of boxes (i,j) that lie under the Dyck path given by dw.
     Each box is represented as a tuple (i,j) where i is the column index (1-based) and j is the row index (1-based).
     """
-    rep = to_column_heights(dw)
+    rep = to_colheights(dw)
     rep = [rep[i] - i - 1 for i in range(len(rep))]
     n = len(rep)
     boxes = []
@@ -245,19 +329,6 @@ def box_from_root(root):
     j = interval_indices[-1] + 1
     return (i, j + 1)
 
-def m_catalan(n,m):
-    """
-    Compute the (n,m)-Catalan number.
-    """
-    from sage.all import binomial
-    return binomial((m+1)*n, n) // ((m*n)+1)
-
-def sum_vectors(v1, v2):
-    """
-    Sums two 0-1 vectors component-wise, returning a new vector.
-    """
-    return [v1[i] + v2[i] for i in range(len(v1))]
-
 def find_missing_vectors(existing_vectors, n):
     """
     Given a list of 0,1 vectors where 1s form contiguous intervals and there is at least one 1 in each vector,
@@ -285,23 +356,6 @@ def find_missing_vectors(existing_vectors, n):
 
     return missing
 
-def check_valid_root(vector):
-    """
-    Check if a given 0-1 vector corresponds to a valid root (i.e., is a 0-1 vector with contiguous 1s).
-    """
-    found_one = False
-    found_zero_after_one = False
-    for bit in vector:
-        if bit != 0 and bit != 1:
-            return False
-        if bit == 1:
-            if found_zero_after_one:
-                return False
-            found_one = True
-        else:
-            if found_one:
-                found_zero_after_one = True
-    return found_one
 
 def check_filtered(chain):
     """
@@ -347,71 +401,24 @@ def check_filtered(chain):
                         return False
     return True
 
-def check_filtered_incremental(partial_chain, roots_cache=None, missing_cache=None):
+def check_in_box_filtered(chain, return_witness=False):
     """
-    Incremental version of check_filtered that can reuse computations from shorter chains.
+    Check if a given chain of Dyck paths under inclusion satisfies the filtered chain condition involving the boxes inside the Dyck paths. (This is the almost the same as the function `check_filtered` with the second loop removed.)
     """
-    if roots_cache is None:
-        roots_cache = {}
-    if missing_cache is None:
-        missing_cache = {}
-
-    chain_len = len(partial_chain)
-    if chain_len <= 1:
-        return True, roots_cache, missing_cache
-
-    # Only compute for new elements
     roots_chain = []
     missing_roots_chain = []
-    n = int(len(partial_chain[0])/2) - 1
-
-    for i, dw in enumerate(partial_chain):
-        dw_key = tuple(dw)
-        if dw_key in roots_cache:
-            roots = roots_cache[dw_key]
-            missing = missing_cache[dw_key]
-        else:
-            roots = get_roots_under_dp(dw)
-            missing = find_missing_vectors(roots, n)
-            roots_cache[dw_key] = roots
-            missing_cache[dw_key] = missing
-
-        roots_chain.append(roots)
-        missing_roots_chain.append(missing)
-
-    # Convert to sets for faster lookup
-    roots_sets = [set(tuple(vec) for vec in roots) for roots in roots_chain]
-    missing_sets = [set(tuple(vec) for vec in missing) for missing in missing_roots_chain]
-
-    # Only check conditions involving the newest element
-    new_idx = chain_len - 1
-
-    for i in range(chain_len):
-        for j in range(i, chain_len):
-            # Skip if neither i nor j is the new element
-            if i != new_idx and j != new_idx:
-                continue
-
-            target_idx = i + 1 + j + 1 - 1
-            if target_idx < chain_len:
-                target_roots_set = roots_sets[target_idx]
-
+    for dw in chain:
+        roots_chain.append(get_roots_under_dp(dw))
+        missing_roots_chain.append(find_missing_vectors(roots_chain[-1], int(len(dw)/2) - 1))
+    for i in range(len(chain)):
+        for j in range(i, len(chain)):
+            if i + 1 + j + 1 <= len(chain):
                 for box_i in roots_chain[i]:
                     for box_j in roots_chain[j]:
-                        sum_box = tuple(box_i[k] + box_j[k] for k in range(len(box_i)))
-                        if check_valid_root(sum_box) and sum_box not in target_roots_set:
-                            return False, roots_cache, missing_cache
-
-            target_missing_idx = min(target_idx, chain_len - 1) if target_idx < chain_len else chain_len - 1
-            target_missing_set = missing_sets[target_missing_idx]
-
-            for box_i in missing_roots_chain[i]:
-                for box_j in missing_roots_chain[j]:
-                    sum_box = tuple(box_i[k] + box_j[k] for k in range(len(box_i)))
-                    if check_valid_root(sum_box) and sum_box not in target_missing_set:
-                        return False, roots_cache, missing_cache
-
-    return True, roots_cache, missing_cache
+                        sum_box = sum_vectors(box_i, box_j)
+                        if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
+                            return False, (i, j, box_from_root(box_i), box_from_root(box_j)) if return_witness else False
+    return (True, None) if return_witness else True
 
 def check_out_box_filtered(chain, return_witness=False):
     """
@@ -429,25 +436,6 @@ def check_out_box_filtered(chain, return_witness=False):
                         sum_box = sum_vectors(box_i, box_j)
                         if check_valid_root(sum_box) and sum_box not in missing_roots_chain[min(i + 1 + j + 1 - 1, len(chain) - 1)]:
                             print(i, j, box_i, box_j, sum_box, (i + 1 + j + 1 - 1) % len(chain))
-                            return False, (i, j, box_from_root(box_i), box_from_root(box_j)) if return_witness else False
-    return (True, None) if return_witness else True
-
-def check_in_box_filtered(chain, return_witness=False):
-    """
-    Check if a given chain of Dyck paths under inclusion satisfies the filtered chain condition involving the boxes inside the Dyck paths. (This is the almost the same as the function `check_filtered` with the second loop removed.)
-    """
-    roots_chain = []
-    missing_roots_chain = []
-    for dw in chain:
-        roots_chain.append(get_roots_under_dp(dw))
-        missing_roots_chain.append(find_missing_vectors(roots_chain[-1], int(len(dw)/2) - 1))
-    for i in range(len(chain)):
-        for j in range(i, len(chain)):
-            if i + 1 + j + 1 <= len(chain):
-                for box_i in roots_chain[i]:
-                    for box_j in roots_chain[j]:
-                        sum_box = sum_vectors(box_i, box_j)
-                        if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
                             return False, (i, j, box_from_root(box_i), box_from_root(box_j)) if return_witness else False
     return (True, None) if return_witness else True
 
@@ -469,6 +457,18 @@ def get_all_in_box_filtered_witnesses(chain):
                         if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
                             witnesses.append((i, j, box_from_root(box_i), box_from_root(box_j)))
     return witnesses
+
+
+def dyck_poset(n):
+    """
+    Returns the poset of Dyck paths of semilength n by inclusion.
+    """
+    youngslattice = posets.YoungsLatticePrincipalOrderIdeal(Partition(list(range(n - 1,0,-1)))).dual()
+    cover_relations = youngslattice.cover_relations()
+    f = {x: x.to_dyck_word(n) for x in youngslattice}
+    new_covers = [[f[x], f[y]] for (x,y) in cover_relations]
+    newposet = Poset((list(f.values()), new_covers))
+    return newposet
 
 def filtered_chains(m, n):
     """
@@ -543,7 +543,14 @@ def filtered_chains_generator(m, n):
 
     yield from construct_multichain(lam)
 
-def area_gluing(tup):
+
+def mdp_to_mdt(mdp):
+    """
+    Splits an m-Dyck path in 0-1 format according to its bounce path into an m-tuple of Dyck paths in 0-1 format.
+    """
+    return RationalDyckPath(string_to_chain(mdp)[0]).split()
+
+def glue_by_area(tup):
     """
     Given an m-tuple of Dyck paths, returns the area vector of the glued m-Dyck path.
     """
@@ -558,7 +565,7 @@ def get_area_gluing_map_dict(m, n):
     chains = filtered_chains_generator(m, n)
     di = {}
     for chain in chains:
-        mdw = area_to_binary(area_gluing(chain), m=len(chain))
+        mdw = area_to_binary(glue_by_area(chain), m=len(chain))
         di["".join(map(str, mdw))] = chain
     return di
 
@@ -568,104 +575,18 @@ def get_area_gluing_pairs_generator(m, n):
     This allows processing without storing all chains in memory.
     """
     for chain in filtered_chains_generator(m, n):
-        mdw = area_to_binary(area_gluing(chain), m=len(chain))
+        mdw = area_to_binary(glue_by_area(chain), m=len(chain))
         mdw_string = "".join(map(str, mdw))
         yield mdw_string, chain
 
-def riffle_lists(lists):
-    """
-    Riffles a list of lists by taking one element from each list in order.
-    Example: [[[1], [3, 3], [4]], [[2, 2], [3], [4]], [[2, 3], [3], [4]]]
-    gives [1, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4]"""
-    # Transpose the lists, filling missing values with empty lists
-    transposed = itertools.zip_longest(*lists, fillvalue=[])
-    # Flatten each group and then flatten the entire result
-    return list(itertools.chain.from_iterable(itertools.chain.from_iterable(group) for group in transposed))
 
-def primes(dw):
-    """
-    Splits a Dyck word into its prime components.
-    """
-    m = int((len(dw) - sum(dw)) / sum(dw))
-    primes = []
-    h = 0
-    v = 0
-    for step in dw:
-        if step == 1:
-            v += 1
-        else:
-            h += 1
-        if v * m == h:
-            primes.append(dw[:h + v])
-            dw = dw[h + v:]
-            h = 0
-            v = 0
-    return primes
-
-def to_column_heights(dw):
-    """
-    Converts a Dyck path from binary representation to column heights.
-
-    The height of column i in a Dyck path is the number of boxes beneath its ith horizontal step when the Dyck path is drawn in a rectangular grid.
-    """
-    heights = []
-    h = 0
-    for step in dw:
-        if step == 1:
-            h += 1
-        if step == 0:
-            heights.append(h)
-    return heights
-
-def area_to_binary(area, m=1):
-    """
-    Converts an area sequence of an m-Dyck path to binary representation of an m-Dyck path.
-    The area sequence gives the area under the path at each step.
-    For an m-Dyck path, the slope is m (m horizontal steps for every 1 vertical step).
-    """
-    n = len(area)
-    # extend with a_{n+1} = 0
-    a_ext = area + [0]
-
-    word = []
-    for i in range(n):
-        # add the i-th up-step
-        word.append(1)
-
-        # number of down-steps forced after this up-step:
-        d_i = m + a_ext[i] - a_ext[i+1]
-
-        word.extend([0] * d_i)
-
-    return word
-
-
-def colheights_to_binary(heights):
-    """
-    Converts a Dyck path from column heights to binary representation.
-    """
-    validate_heights(heights)
-    dw = [1] * heights[0] + [0]
-    for i, height in enumerate(heights[1:]):
-        i = i + 1
-        dw.extend([1] * (height - heights[i - 1]))
-        dw.append(0)
-    return dw
-
-def validate_heights(heights):
-    """
-    Check if a list is a valid column heights representation of a Dyck path.
-    """
-    if not heights == sorted(heights):
-        raise Exception('Heights must be non-decreasing')
-
-def generate_tuples(n, m):
+def generate_all_m_tuples(n, m):
     """
     Generate all m-tuples of Dyck paths of semilength n.
     """
     return list(itertools.product(DyckWords(n), repeat=m))
 
-def generate_m_Dyck_paths(n, m):
+def generate_all_m_Dyck_paths(n, m):
     """
     Generate all m-Dyck paths of height n.
     """
@@ -735,40 +656,6 @@ def random_m_Dyck_path(n, m):
 
     return path
 
-def cat(n,m=1):
-    """
-    Compute the (n,m)-Catalan number.
-    """
-    from sage.all import binomial
-    return binomial((m+1)*n, n) // ((m*n)+1)
-
-def check(n,m):
-    """
-    Check if the prediction condition holds true for all m-tuples of Dyck paths of semilength n.
-    """
-    tuples = generate_tuples(n, m)
-    valid = 0
-    warning_counters = {'false_positive': 0, 'false_negative': 0}
-
-    for t in tuples:
-        try:
-            dt = DyckTuple(t)
-            glue = dt.glue(warning_counters)
-            # print(glue)
-            valid += 1
-        except Exception as e:
-            # print(f"{t}: {e}")
-            continue
-
-    print(f"Valid tuples: {valid} out of {len(tuples)}")
-    print(f"Prediction warnings:")
-    print(f"  False positives (predicted valid but got exception): {warning_counters['false_positive']}")
-    print(f"  False negatives (predicted exception but got valid): {warning_counters['false_negative']}")
-    print(f"  Total prediction errors: {warning_counters['false_positive'] + warning_counters['false_negative']}")
-
-    if valid != cat(n, m):
-        print(f"Discrepancy found: valid = {valid}, Catalan = {cat(n, m)}")
-        raise Exception("Catalan number mismatch")
 
 def dyck_path_to_lines(dyck_path):
     """
@@ -953,131 +840,6 @@ def print_matched_chains(n,m, check_gravity_falls=True):
     print(f"Total mismatched chains found: {mismatch_count}")
     print(f"Results written to {filename}")
 
-
-def gravity_falls(tup):
-    """
-    Stack the Dyck paths represented in tup and move boxes between them by letting them fall down.
-    If a tuple exists in list i but not in list j for j > i,
-    move it to the largest such j.
-
-    Args:
-        tup: List of lists, where the ith list contains tuples representing boxes under the ith Dyck path and above the diagonal OR list of lists representing a chain of Dyck paths in binary format
-
-    Returns:
-        The modified original list after letting the boxes "fall" to the bottom.
-    """
-    n = len(tup)
-
-    if len(tup[0]) != 0 and type(tup[0][0]) is not tuple:
-        tup = [get_boxes_under_dp(dw) for dw in tup]
-    # Process each list from first to second-to-last
-    for i in range(n - 1):
-        tuples_to_move = []
-
-        # Check each tuple in the current list
-        for tuple_item in tup[i][:]:  # Use slice to avoid modification during iteration
-            # Find the largest j > i where this tuple doesn't exist
-            target_j = None
-
-            # Check from the end backwards to find the largest valid j
-            for j in range(n - 1, i, -1):
-                if tuple_item not in tup[j]:
-                    target_j = j
-                    break
-
-            # If we found a target list, move the tuple there
-            if target_j is not None:
-                tuples_to_move.append((tuple_item, target_j))
-
-        # Actually move the tuples
-        for tuple_item, target_j in tuples_to_move:
-            tup[i].remove(tuple_item)
-            tup[target_j].append(tuple_item)
-
-    return tup
-
-def slide(chain):
-    """
-    Given a chain of Dyck paths, perform the gravity falls and then the slide operation on it.
-    """
-    boxes_list = [get_boxes_under_dp(dw) for dw in chain]
-    new_boxes_list = gravity_falls(boxes_list) # it looks like gravity_falls modifies in place, so we might not need to assign it...
-    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
-    success, witness = check_in_box_filtered(new_chain, return_witness=True)
-    if success:
-        return new_chain
-    # recall: witness = (i, j, box_i, box_j) where box_i and box_j are (col, row) tuples
-    right_box_index = 1 if witness[2][0] <= witness[3][0] else 0
-    right_box = witness[2 + right_box_index]
-    right_box_dp = witness[right_box_index]
-    sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
-
-
-    while gravity_falls(sliding_boxes_list) == new_boxes_list:
-        stack_to_slide = [box for box in new_boxes_list[right_box_dp] if box[0] == right_box[0] and box[1]  >= right_box[1]]
-        for box in stack_to_slide:
-            sliding_boxes_list[right_box_dp].remove(box)
-            i = 1
-            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + 1]:
-                i += 1
-            sliding_boxes_list[right_box_dp + 1].append((box[0] - i, box[1]))  # slide left and drop down one level
-    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
-
-    return new_chain
-
-def slide_hole(chain):
-    """
-    Given a chain of Dyck paths, slide a hole that violates the out-box filtered chain condition.
-    """
-    boxes_list = [get_boxes_under_dp(dw) for dw in chain]
-    new_boxes_list = gravity_falls(boxes_list) # this might not be needed, but we keep it for safety
-    missing_boxes_list = [[box_from_root(vec) for vec in find_missing_vectors(get_roots_under_dp(dp))] for dp in chain]
-    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
-    success, witness = check_out_box_filtered(new_chain, return_witness=True)
-    if success:
-        return new_chain
-    # recall: witness = (i, j, box_i, box_j) where box_i and box_j are (col, row) tuples
-    right_box_index = 1 if witness[2][0] <= witness[3][0] else 0
-    right_box = witness[2 + right_box_index]
-    right_box_dp = witness[right_box_index]
-    sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
-
-    while gravity_falls(sliding_boxes_list) == new_boxes_list:
-        stack_to_slide = [box for box in new_boxes_list[right_box_dp] if box[0] == right_box[0] and box[1] >= right_box[1]]
-        for box in stack_to_slide:
-            sliding_boxes_list[right_box_dp].remove(box)
-            i = 1
-            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + 1]:
-                i += 1
-            sliding_boxes_list[right_box_dp + 1].append((box[0] - i, box[1]))  # slide left and drop down one level
-    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
-
-    return new_chain
-
-def print_slide(chain):
-    """
-    Print the result of performing the slide operation on a given chain of Dyck paths.
-    Args:
-        chain: A chain (list) of Dyck paths in binary format or an m-Dyck path in binary format.
-    """
-    if type(chain) is str:
-        chain = mdp_to_mdt(chain)
-    newchain = slide(chain)
-    for dp in newchain:
-        DyckWord(dp).pp()
-    return newchain
-
-def slip_n_slide(chain):
-    """
-    Given a chain of Dyck paths, perform the gravity falls and slide operation repeatedly until it stabilizes.
-    """
-    previous_chain = chain
-    while True:
-        new_chain = slide(previous_chain)
-        if new_chain == previous_chain:
-            return new_chain
-        previous_chain = new_chain
-
 def print_out_box_violating_bounce_chains(n, m):
     import os
 
@@ -1176,6 +938,132 @@ def print_out_box_violating_chains(n, m, chains):
     print(f"Total mismatched chains found: {mismatch_count}")
     print(f"Results written to {filename}")
 
+
+def gravity_falls(tup):
+    """
+    Stack the Dyck paths represented in tup and move boxes between them by letting them fall down.
+    If a tuple exists in list i but not in list j for j > i,
+    move it to the largest such j.
+
+    Args:
+        tup: List of lists, where the ith list contains tuples representing boxes under the ith Dyck path and above the diagonal OR list of lists representing a chain of Dyck paths in binary format
+
+    Returns:
+        The modified original list after letting the boxes "fall" to the bottom.
+    """
+    n = len(tup)
+
+    if len(tup[0]) != 0 and type(tup[0][0]) is not tuple:
+        tup = [get_boxes_under_dp(dw) for dw in tup]
+    # Process each list from first to second-to-last
+    for i in range(n - 1):
+        tuples_to_move = []
+
+        # Check each tuple in the current list
+        for tuple_item in tup[i][:]:  # Use slice to avoid modification during iteration
+            # Find the largest j > i where this tuple doesn't exist
+            target_j = None
+
+            # Check from the end backwards to find the largest valid j
+            for j in range(n - 1, i, -1):
+                if tuple_item not in tup[j]:
+                    target_j = j
+                    break
+
+            # If we found a target list, move the tuple there
+            if target_j is not None:
+                tuples_to_move.append((tuple_item, target_j))
+
+        # Actually move the tuples
+        for tuple_item, target_j in tuples_to_move:
+            tup[i].remove(tuple_item)
+            tup[target_j].append(tuple_item)
+
+    return tup
+
+def slide_box(chain):
+    """
+    Given a chain of Dyck paths, perform the gravity falls and then the slide operation on it.
+    """
+    boxes_list = [get_boxes_under_dp(dw) for dw in chain]
+    new_boxes_list = gravity_falls(boxes_list) # it looks like gravity_falls modifies in place, so we might not need to assign it...
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
+    success, witness = check_in_box_filtered(new_chain, return_witness=True)
+    if success:
+        return new_chain
+    # recall: witness = (i, j, box_i, box_j) where box_i and box_j are (col, row) tuples
+    right_box_index = 1 if witness[2][0] <= witness[3][0] else 0
+    right_box = witness[2 + right_box_index]
+    right_box_dp = witness[right_box_index]
+    sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
+
+
+    while gravity_falls(sliding_boxes_list) == new_boxes_list:
+        stack_to_slide = [box for box in new_boxes_list[right_box_dp] if box[0] == right_box[0] and box[1]  >= right_box[1]]
+        for box in stack_to_slide:
+            sliding_boxes_list[right_box_dp].remove(box)
+            i = 1
+            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + 1]:
+                i += 1
+            sliding_boxes_list[right_box_dp + 1].append((box[0] - i, box[1]))  # slide left and drop down one level
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
+
+    return new_chain
+
+def slide_hole(chain):
+    """
+    Given a chain of Dyck paths, slide a hole that violates the out-box filtered chain condition.
+    """
+    boxes_list = [get_boxes_under_dp(dw) for dw in chain]
+    new_boxes_list = gravity_falls(boxes_list) # this might not be needed, but we keep it for safety
+    missing_boxes_list = [[box_from_root(vec) for vec in find_missing_vectors(get_roots_under_dp(dp))] for dp in chain]
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
+    success, witness = check_out_box_filtered(new_chain, return_witness=True)
+    if success:
+        return new_chain
+    # recall: witness = (i, j, box_i, box_j) where box_i and box_j are (col, row) tuples
+    right_box_index = 1 if witness[2][0] <= witness[3][0] else 0
+    right_box = witness[2 + right_box_index]
+    right_box_dp = witness[right_box_index]
+    sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
+
+    while gravity_falls(sliding_boxes_list) == new_boxes_list:
+        stack_to_slide = [box for box in new_boxes_list[right_box_dp] if box[0] == right_box[0] and box[1] >= right_box[1]]
+        for box in stack_to_slide:
+            sliding_boxes_list[right_box_dp].remove(box)
+            i = 1
+            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + 1]:
+                i += 1
+            sliding_boxes_list[right_box_dp + 1].append((box[0] - i, box[1]))  # slide left and drop down one level
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
+
+    return new_chain
+
+def print_slide(chain):
+    """
+    Print the result of performing the slide operation on a given chain of Dyck paths.
+    Args:
+        chain: A chain (list) of Dyck paths in binary format or an m-Dyck path in binary format.
+    """
+    if type(chain) is str:
+        chain = mdp_to_mdt(chain)
+    newchain = slide_box(chain)
+    for dp in newchain:
+        DyckWord(dp).pp()
+    return newchain
+
+def slip_n_slide(chain):
+    """
+    Given a chain of Dyck paths, perform the gravity falls and slide operation repeatedly until it stabilizes.
+    """
+    previous_chain = chain
+    while True:
+        new_chain = slide_box(previous_chain)
+        if new_chain == previous_chain:
+            return new_chain
+        previous_chain = new_chain
+
+
 def print_random_bounce_chain(n,m):
     random_n_m = random_m_Dyck_path(Integer(n),Integer(m))
     mdp_n = RationalDyckPath(random_n_m)
@@ -1193,6 +1081,7 @@ def print_random_bounce_chain(n,m):
     for dp in split_n:
         print(dp)
 
+
 def generate_integer_partitions(n, m):
     """
     Generate all ways to partition integer n into m non-negative increasing parts.
@@ -1205,7 +1094,6 @@ def generate_integer_partitions(n, m):
         padded = pad(list(partition), m)
         partitions.append(list(reversed(padded)))
     return partitions
-
 
 def is_valid_area_sequence(area_seq):
     """
