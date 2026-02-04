@@ -124,6 +124,10 @@ class DyckTuple:
         return result
 
 
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
 def riffle_lists(lists):
     """
     Riffles a list of lists by taking one element from each list in order.
@@ -180,6 +184,10 @@ def m_catalan(n,m=1):
     from sage.all import binomial
     return binomial((m+1)*n, n) // ((m*n)+1)
 
+
+# =============================================================================
+# DYCK PATH REPRESENTATION & CONVERSION
+# =============================================================================
 
 def areaseq_to_binary(area, m=1):
     """
@@ -256,6 +264,10 @@ def check_valid_colheights(heights):
     if not heights == sorted(heights):
         raise Exception('Heights must be non-decreasing')
 
+
+# =============================================================================
+# ROOT SYSTEMS & BOX OPERATIONS
+# =============================================================================
 
 def check_valid_root(vector):
     """
@@ -356,6 +368,10 @@ def find_missing_vectors(existing_vectors, n):
 
     return missing
 
+
+# =============================================================================
+# FILTERED CHAIN CHECKING
+# =============================================================================
 
 def check_filtered(chain):
     """
@@ -459,6 +475,108 @@ def get_all_in_box_filtered_witnesses(chain):
     return witnesses
 
 
+# =============================================================================
+# DYCK PATH GENERATION
+# =============================================================================
+
+def generate_all_m_tuples(n, m):
+    """
+    Generate all m-tuples of Dyck paths of semilength n.
+    """
+    return list(itertools.product(DyckWords(n), repeat=m))
+
+def generate_all_m_Dyck_paths(n, m):
+    """
+    Generate all m-Dyck paths of height n.
+    """
+    from sage.combinat.tamari_lattices import GeneralizedTamariLattice
+    return list(GeneralizedTamariLattice(n * m, m))
+
+def random_m_Dyck_path(n, m):
+    """
+    Generate a random m-Dyck path of height n using uniform random walk construction.
+
+    Args:
+        n: height of the path
+        m: slope parameter (m horizontal steps for each vertical step)
+
+    Returns:
+        A random m-Dyck path as a binary list
+    """
+    import random
+
+    # We need n up-steps and m*n down-steps
+    total_steps = n * (m + 1)
+    up_steps = n
+    down_steps = m * n
+
+    path = []
+    current_height = 0
+
+    # Build path step by step, respecting the constraint that we never go below the line y = x/m
+    for step_num in range(total_steps):
+        remaining_steps = total_steps - step_num
+        remaining_up = up_steps - sum(path)  # Number of 1s added so far
+        remaining_down = down_steps - (step_num - sum(path))  # Number of 0s added so far
+
+        # Calculate current position
+        steps_so_far = len(path)
+        current_up = sum(path)
+        current_down = steps_so_far - current_up
+
+        # Check if we can add an up-step without violating constraints later
+        can_go_up = (remaining_up > 0) and (current_down * 1 <= (current_up + 1) * m)
+
+        # Check if we can add a down-step without going below the line
+        can_go_down = (remaining_down > 0) and ((current_down + 1) * 1 <= current_up * m)
+
+        # If we must take remaining up steps
+        if remaining_down == 0:
+            path.append(1)
+        # If we must take remaining down steps
+        elif remaining_up == 0:
+            path.append(0)
+        # If both are possible, choose randomly
+        elif can_go_up and can_go_down:
+            path.append(random.choice([0, 1]))
+        # If only up is possible
+        elif can_go_up:
+            path.append(1)
+        # If only down is possible
+        elif can_go_down:
+            path.append(0)
+        else:
+            # This shouldn't happen in a well-constructed algorithm
+            # Fall back to completing with required steps
+            if remaining_up > 0:
+                path.append(1)
+            else:
+                path.append(0)
+
+    return path
+
+def print_random_bounce_chain(n,m):
+    random_n_m = random_m_Dyck_path(Integer(n),Integer(m))
+    mdp_n = RationalDyckPath(random_n_m)
+    split_n = mdp_n.split()
+    for dp in split_n:
+        DyckWord(dp).pp()
+    print("m-Dyck word:")
+    print(random_n_m)
+    print(binary_to_areaseq(random_n_m))
+    print()
+    print("bounce chain:")
+    for dp in split_n:
+        print(DyckWord(dp).to_area_sequence())
+    print()
+    for dp in split_n:
+        print(dp)
+
+
+# =============================================================================
+# FILTERED CHAIN GENERATION
+# =============================================================================
+
 def dyck_poset(n):
     """
     Returns the poset of Dyck paths of semilength n by inclusion.
@@ -544,6 +662,10 @@ def filtered_chains_generator(m, n):
     yield from construct_multichain(lam)
 
 
+# =============================================================================
+# GLUING AND SPLITTING
+# =============================================================================
+
 def mdp_to_mdt(mdp):
     """
     Splits an m-Dyck path in 0-1 format according to its bounce path into an m-tuple of Dyck paths in 0-1 format.
@@ -580,82 +702,9 @@ def get_area_gluing_pairs_generator(m, n):
         yield mdw_string, chain
 
 
-def generate_all_m_tuples(n, m):
-    """
-    Generate all m-tuples of Dyck paths of semilength n.
-    """
-    return list(itertools.product(DyckWords(n), repeat=m))
-
-def generate_all_m_Dyck_paths(n, m):
-    """
-    Generate all m-Dyck paths of height n.
-    """
-    from sage.combinat.tamari_lattices import GeneralizedTamariLattice
-    return list(GeneralizedTamariLattice(n * m, m))
-
-def random_m_Dyck_path(n, m):
-    """
-    Generate a random m-Dyck path of height n using uniform random walk construction.
-
-    Args:
-        n: height of the path
-        m: slope parameter (m horizontal steps for each vertical step)
-
-    Returns:
-        A random m-Dyck path as a binary list
-    """
-    import random
-
-    # We need n up-steps and m*n down-steps
-    total_steps = n * (m + 1)
-    up_steps = n
-    down_steps = m * n
-
-    path = []
-    current_height = 0
-
-    # Build path step by step, respecting the constraint that we never go below the line y = x/m
-    for step_num in range(total_steps):
-        remaining_steps = total_steps - step_num
-        remaining_up = up_steps - sum(path)  # Number of 1s added so far
-        remaining_down = down_steps - (step_num - sum(path))  # Number of 0s added so far
-
-        # Calculate current position
-        steps_so_far = len(path)
-        current_up = sum(path)
-        current_down = steps_so_far - current_up
-
-        # Check if we can add an up-step without violating constraints later
-        can_go_up = (remaining_up > 0) and (current_down * 1 <= (current_up + 1) * m)
-
-        # Check if we can add a down-step without going below the line
-        can_go_down = (remaining_down > 0) and ((current_down + 1) * 1 <= current_up * m)
-
-        # If we must take remaining up steps
-        if remaining_down == 0:
-            path.append(1)
-        # If we must take remaining down steps
-        elif remaining_up == 0:
-            path.append(0)
-        # If both are possible, choose randomly
-        elif can_go_up and can_go_down:
-            path.append(random.choice([0, 1]))
-        # If only up is possible
-        elif can_go_up:
-            path.append(1)
-        # If only down is possible
-        elif can_go_down:
-            path.append(0)
-        else:
-            # This shouldn't happen in a well-constructed algorithm
-            # Fall back to completing with required steps
-            if remaining_up > 0:
-                path.append(1)
-            else:
-                path.append(0)
-
-    return path
-
+# =============================================================================
+# PRINTING
+# =============================================================================
 
 def dyck_path_to_lines(dyck_path):
     """
@@ -939,6 +988,10 @@ def print_out_box_violating_chains(n, m, chains):
     print(f"Results written to {filename}")
 
 
+# =============================================================================
+# SLIP N SLIDE (conjectured algorithm for bounce chain to filtered chain)
+# =============================================================================
+
 def gravity_falls(tup):
     """
     Stack the Dyck paths represented in tup and move boxes between them by letting them fall down.
@@ -1064,23 +1117,9 @@ def slip_n_slide(chain):
         previous_chain = new_chain
 
 
-def print_random_bounce_chain(n,m):
-    random_n_m = random_m_Dyck_path(Integer(n),Integer(m))
-    mdp_n = RationalDyckPath(random_n_m)
-    split_n = mdp_n.split()
-    for dp in split_n:
-        DyckWord(dp).pp()
-    print("m-Dyck word:")
-    print(random_n_m)
-    print(binary_to_areaseq(random_n_m))
-    print()
-    print("bounce chain:")
-    for dp in split_n:
-        print(DyckWord(dp).to_area_sequence())
-    print()
-    for dp in split_n:
-        print(dp)
-
+# =============================================================================
+# AREA GLUING INVERSE
+# =============================================================================
 
 def generate_integer_partitions(n, m):
     """
@@ -1190,6 +1229,7 @@ def area_gluing_inverse(seq, m):
     # Start with empty area sequences for each of the m Dyck paths
     initial_partitions = [[] for _ in range(m)]
     return generate_partitions(0, initial_partitions)
+
 
 if __name__ == "__main__":
     pass
