@@ -79,6 +79,26 @@ class RationalDyckPath:
             parts[i % self.m].extend(new)
         return [colheights_to_binary(part) for part in parts]
 
+    def areaseq(self):
+        return binary_to_areaseq(self.dyckword)
+
+def binary_to_areaseq(bin):
+    """
+    Converts the binary representation of the m-Dyck path to its area sequence.
+    """
+    if not isinstance(bin, RationalDyckPath):
+        bin = RationalDyckPath(bin)
+    area_seq = []
+    h = 0
+    v = 0
+    for step in bin.dyckword:
+        if step == 1:
+            area_seq.append((int(v * bin.m) - h))
+            v += 1
+        else:
+            h += 1
+    return area_seq
+
 class DyckTuple:
     def __init__(self, tup: tuple):
         self.tup = tuple(RationalDyckPath(dp) for dp in tup)
@@ -151,6 +171,25 @@ def dyck_poset(n):
     new_covers = [[f[x], f[y]] for (x,y) in cover_relations]
     newposet = Poset((list(f.values()), new_covers))
     return newposet
+
+def string_to_chain(s):
+    """
+    Converts a string representation of a chain of Dyck paths into a list of Dyck paths in 0-1 format.
+    Example input: "11010000, 11100000, 11101000"
+    """
+    parts = s.split(',')
+    chain = []
+    for part in parts:
+        dw_str = part.strip()
+        dw = [int(c) for c in dw_str]
+        chain.append(dw)
+    return chain
+
+def mdp_to_mdt(mdp):
+    """
+    Converts an m-Dyck path in 0-1 format into an m-tuple of Dyck paths in 0-1 format.
+    """
+    return RationalDyckPath(string_to_chain(mdp)[0]).split()
 
 def get_roots_under_dp(dw):
     """
@@ -271,27 +310,112 @@ def check_filtered(chain):
     """
     roots_chain = []
     missing_roots_chain = []
+    n = int(len(chain[0])/2) - 1  # Calculate once
+
+    # Pre-compute all roots and missing roots
     for dw in chain:
-        roots_chain.append(get_roots_under_dp(dw))
-        missing_roots_chain.append(find_missing_vectors(roots_chain[-1], int(len(dw)/2) - 1))
-    for i in range(len(chain)):
-        for j in range(i, len(chain)):
-            if i + 1 + j + 1 <= len(chain):
+        roots = get_roots_under_dp(dw)
+        roots_chain.append(roots)
+        missing_roots_chain.append(find_missing_vectors(roots, n))
+
+    # Convert to sets for faster lookup
+    roots_sets = [set(tuple(vec) for vec in roots) for roots in roots_chain]
+    missing_sets = [set(tuple(vec) for vec in missing) for missing in missing_roots_chain]
+
+    # Check filtered conditions
+    chain_len = len(chain)
+    for i in range(chain_len):
+        for j in range(i, chain_len):
+            target_idx = i + 1 + j + 1 - 1
+            if target_idx < chain_len:
+                target_roots_set = roots_sets[target_idx]
+                # Check in-box condition
                 for box_i in roots_chain[i]:
                     for box_j in roots_chain[j]:
-                        sum_box = sum_vectors(box_i, box_j)
-                        if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
+                        sum_box = tuple(box_i[k] + box_j[k] for k in range(len(box_i)))
+                        if check_valid_root(sum_box) and sum_box not in target_roots_set:
                             return False
+
+            # Check out-box condition
+            target_missing_idx = min(target_idx, chain_len - 1) if target_idx < chain_len else chain_len - 1
+            target_missing_set = missing_sets[target_missing_idx]
+
             for box_i in missing_roots_chain[i]:
-                    for box_j in missing_roots_chain[j]:
-                        sum_box = sum_vectors(box_i, box_j)
-                        if check_valid_root(sum_box) and sum_box not in missing_roots_chain[min(i + 1 + j + 1 - 1, len(chain) - 1)]:
-                            return False
+                for box_j in missing_roots_chain[j]:
+                    sum_box = tuple(box_i[k] + box_j[k] for k in range(len(box_i)))
+                    if check_valid_root(sum_box) and sum_box not in target_missing_set:
+                        return False
     return True
 
-def check_out_box_filtered(chain):
+def check_filtered_incremental(partial_chain, roots_cache=None, missing_cache=None):
     """
-    Check if a given tuple of Dyck paths satisfies the second filtered chain condition involving the boxes outside the Dyck paths. (This is the same as the function `check_filtered` with the first loop removed)
+    Incremental version of check_filtered that can reuse computations from shorter chains.
+    """
+    if roots_cache is None:
+        roots_cache = {}
+    if missing_cache is None:
+        missing_cache = {}
+
+    chain_len = len(partial_chain)
+    if chain_len <= 1:
+        return True, roots_cache, missing_cache
+
+    # Only compute for new elements
+    roots_chain = []
+    missing_roots_chain = []
+    n = int(len(partial_chain[0])/2) - 1
+
+    for i, dw in enumerate(partial_chain):
+        dw_key = tuple(dw)
+        if dw_key in roots_cache:
+            roots = roots_cache[dw_key]
+            missing = missing_cache[dw_key]
+        else:
+            roots = get_roots_under_dp(dw)
+            missing = find_missing_vectors(roots, n)
+            roots_cache[dw_key] = roots
+            missing_cache[dw_key] = missing
+
+        roots_chain.append(roots)
+        missing_roots_chain.append(missing)
+
+    # Convert to sets for faster lookup
+    roots_sets = [set(tuple(vec) for vec in roots) for roots in roots_chain]
+    missing_sets = [set(tuple(vec) for vec in missing) for missing in missing_roots_chain]
+
+    # Only check conditions involving the newest element
+    new_idx = chain_len - 1
+
+    for i in range(chain_len):
+        for j in range(i, chain_len):
+            # Skip if neither i nor j is the new element
+            if i != new_idx and j != new_idx:
+                continue
+
+            target_idx = i + 1 + j + 1 - 1
+            if target_idx < chain_len:
+                target_roots_set = roots_sets[target_idx]
+
+                for box_i in roots_chain[i]:
+                    for box_j in roots_chain[j]:
+                        sum_box = tuple(box_i[k] + box_j[k] for k in range(len(box_i)))
+                        if check_valid_root(sum_box) and sum_box not in target_roots_set:
+                            return False, roots_cache, missing_cache
+
+            target_missing_idx = min(target_idx, chain_len - 1) if target_idx < chain_len else chain_len - 1
+            target_missing_set = missing_sets[target_missing_idx]
+
+            for box_i in missing_roots_chain[i]:
+                for box_j in missing_roots_chain[j]:
+                    sum_box = tuple(box_i[k] + box_j[k] for k in range(len(box_i)))
+                    if check_valid_root(sum_box) and sum_box not in target_missing_set:
+                        return False, roots_cache, missing_cache
+
+    return True, roots_cache, missing_cache
+
+def check_out_box_filtered(chain, return_witness=False):
+    """
+    Check if a given tuple of Dyck paths satisfies the second filtered chain condition involving the boxes outside the Dyck paths. (This is the almost same as the function `check_filtered` with the first loop removed)
     """
     roots_chain = []
     missing_roots_chain = []
@@ -326,6 +450,25 @@ def check_in_box_filtered(chain, return_witness=False):
                         if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
                             return False, (i, j, box_from_root(box_i), box_from_root(box_j)) if return_witness else False
     return (True, None) if return_witness else True
+
+def get_all_in_box_filtered_witnesses(chain):
+    roots_chain = []
+    missing_roots_chain = []
+    for dw in chain:
+        roots_chain.append(get_roots_under_dp(dw))
+        missing_roots_chain.append(find_missing_vectors(roots_chain[-1], int(len(dw)/2) - 1))
+    witnesses = []
+    for i in range(len(chain)):
+        for j in range(i, len(chain)):
+            if i + 1 + j + 1 <= len(chain):
+                for box_i in roots_chain[i]:
+                    for box_j in roots_chain[j]:
+                        # if i == j and box_i[0] >= box_j[0]:
+                        #     continue
+                        sum_box = sum_vectors(box_i, box_j)
+                        if check_valid_root(sum_box) and sum_box not in roots_chain[i + 1 + j + 1 - 1]:
+                            witnesses.append((i, j, box_from_root(box_i), box_from_root(box_j)))
+    return witnesses
 
 def filtered_chains(m, n):
     """
