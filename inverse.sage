@@ -1,14 +1,15 @@
 import itertools
+from typing import Union
 
 # Examples
 # IN_BOX_VIOLATING_CHAIN = [
 NON_FILTERED_CHAIN = [[1,1,0,1,0,1,0,0,], [1,1,1,0,0,0,1,0], [1,1,1,0,0,0,1,0], [1,1,1,0,0,1,0,0]]
 
 class RationalDyckPath:
-    def __init__(self, l: list):
-        self.dyckword = l
-        self.vertical = sum(l)
-        self.horizontal = len(l) - sum(l)
+    def __init__(self, l: Union[list, str]):
+        self.dyckword = l if type(l) == list else string_to_chain(l)[0]
+        self.vertical = sum(self.dyckword)
+        self.horizontal = len(self.dyckword) - sum(self.dyckword)
         self.slope = self.vertical/self.horizontal
         self.n = self.vertical
         self.m = int(self.horizontal / self.vertical)
@@ -119,7 +120,7 @@ class DyckTuple:
 
         # Check if RationalDyckPath(to_binary(riffled)) raises exception iff prediction is False
         try:
-            result = RationalDyckPath(colheight_to_binary(riffled))
+            result = RationalDyckPath(colheights_to_binary(riffled))
             if not prediction:
                 print(f"WARNING: Expected exception but got valid path. Prediction: {prediction}")
                 if warning_counters:
@@ -304,8 +305,8 @@ def check_out_box_filtered(chain):
                         sum_box = sum_vectors(box_i, box_j)
                         if check_valid_root(sum_box) and sum_box not in missing_roots_chain[min(i + 1 + j + 1 - 1, len(chain) - 1)]:
                             print(i, j, box_i, box_j, sum_box, (i + 1 + j + 1 - 1) % len(chain))
-                            return False
-    return True
+                            return False, (i, j, box_from_root(box_i), box_from_root(box_j)) if return_witness else False
+    return (True, None) if return_witness else True
 
 def check_in_box_filtered(chain, return_witness=False):
     """
@@ -333,7 +334,6 @@ def filtered_chains(m, n):
       - the tuple forms an increasing chain in the Dyck path inclusion poset
       - under the bijection of Dyck paths to order ideals in the root poset of type A, the chain corresponds to a filtered chain of order ideals
     """
-    from itertools import product
     poset = dyck_poset(n)
 
     elements = list(poset)
@@ -709,9 +709,13 @@ def print_mismatched_chains(n,m, check_gravity_falls=True):
                 for line in formatted_pairs:
                     f.write(line + '\n')
                 if check_gravity_falls:
-                    if slip_n_slide(dt) != chain:
-                        print(f"Slip n slide check failed for mismatch #{mismatch_count} at chain {chain} (mdw: {dt})")
-                        f.write("Slip n slide check FAILED!\n")
+                    try:
+                        if slip_n_slide(dt) != chain:
+                            print(f"Slip n slide check failed for mismatch #{mismatch_count} at chain {chain} (mdw: {dt})")
+                            f.write("Slip n slide check FAILED!\n")
+                    except Exception as e:
+                        print(f"Slip n slide check raised exception for mismatch #{mismatch_count} at chain {chain} (mdw: {dt}): {e}")
+                        f.write("Slip n slide check RAISED EXCEPTION!\n")
 
                 f.write('\n')  # Extra blank line after each mismatch
                 f.flush()  # Force write to disk immediately
@@ -795,15 +799,15 @@ def gravity_falls(tup):
     move it to the largest such j.
 
     Args:
-        tup: List of lists, where the ith list contains tuples representing boxes under the ith Dyck path and above the diagonal
+        tup: List of lists, where the ith list contains tuples representing boxes under the ith Dyck path and above the diagonal OR list of lists representing a chain of Dyck paths in binary format
 
     Returns:
         The modified original list after letting the boxes "fall" to the bottom.
-
-    CONJECTURE: The resulting list of Dyck paths is always a filtered chain.
     """
     n = len(tup)
 
+    if len(tup[0]) != 0 and type(tup[0][0]) is not tuple:
+        tup = [get_boxes_under_dp(dw) for dw in tup]
     # Process each list from first to second-to-last
     for i in range(n - 1):
         tuples_to_move = []
@@ -835,7 +839,7 @@ def slide(chain):
     Given a chain of Dyck paths, perform the gravity falls and then the slide operation on it.
     """
     boxes_list = [get_boxes_under_dp(dw) for dw in chain]
-    new_boxes_list = gravity_falls(boxes_list)
+    new_boxes_list = gravity_falls(boxes_list) # it looks like gravity_falls modifies in place, so we might not need to assign it...
     new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
     success, witness = check_in_box_filtered(new_chain, return_witness=True)
     if success:
