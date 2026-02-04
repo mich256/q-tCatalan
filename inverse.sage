@@ -1054,13 +1054,60 @@ def slide(chain):
     right_box_dp = witness[right_box_index]
     sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
 
+
     while gravity_falls(sliding_boxes_list) == new_boxes_list:
-        sliding_boxes_list[right_box_dp].remove(right_box)
-        right_box = (right_box[0] - 1, right_box[1])
-        sliding_boxes_list[right_box_dp].append(right_box) # slide left
+        stack_to_slide = [box for box in new_boxes_list[right_box_dp] if box[0] == right_box[0] and box[1]  >= right_box[1]]
+        for box in stack_to_slide:
+            sliding_boxes_list[right_box_dp].remove(box)
+            i = 1
+            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + 1]:
+                i += 1
+            sliding_boxes_list[right_box_dp + 1].append((box[0] - i, box[1]))  # slide left and drop down one level
     new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
 
     return new_chain
+
+def slide_hole(chain):
+    """
+    Given a chain of Dyck paths, slide a hole that violates the out-box filtered chain condition.
+    """
+    boxes_list = [get_boxes_under_dp(dw) for dw in chain]
+    new_boxes_list = gravity_falls(boxes_list) # this might not be needed, but we keep it for safety
+    missing_boxes_list = [[box_from_root(vec) for vec in find_missing_vectors(get_roots_under_dp(dp))] for dp in chain]
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
+    success, witness = check_out_box_filtered(new_chain, return_witness=True)
+    if success:
+        return new_chain
+    # recall: witness = (i, j, box_i, box_j) where box_i and box_j are (col, row) tuples
+    right_box_index = 1 if witness[2][0] <= witness[3][0] else 0
+    right_box = witness[2 + right_box_index]
+    right_box_dp = witness[right_box_index]
+    sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
+
+    while gravity_falls(sliding_boxes_list) == new_boxes_list:
+        stack_to_slide = [box for box in new_boxes_list[right_box_dp] if box[0] == right_box[0] and box[1] >= right_box[1]]
+        for box in stack_to_slide:
+            sliding_boxes_list[right_box_dp].remove(box)
+            i = 1
+            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + 1]:
+                i += 1
+            sliding_boxes_list[right_box_dp + 1].append((box[0] - i, box[1]))  # slide left and drop down one level
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
+
+    return new_chain
+
+def print_slide(chain):
+    """
+    Print the result of performing the slide operation on a given chain of Dyck paths.
+    Args:
+        chain: A chain (list) of Dyck paths in binary format or an m-Dyck path in binary format.
+    """
+    if type(chain) is str:
+        chain = mdp_to_mdt(chain)
+    newchain = slide(chain)
+    for dp in newchain:
+        DyckWord(dp).pp()
+    return newchain
 
 def slip_n_slide(chain):
     """
