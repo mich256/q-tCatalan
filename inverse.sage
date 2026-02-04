@@ -543,48 +543,6 @@ def filtered_chains_generator(m, n):
 
     yield from construct_multichain(lam)
 
-def area_gluing_inverse(mdw):
-    """
-    Given an m-Dyck path in binary representation, returns the m-tuple of Dyck paths obtained by splitting it according to its area.
-    """
-    import time
-
-    if type(mdw) == list:
-        m = int((len(mdw) - sum(mdw)) / sum(mdw))
-        n = sum(mdw)
-    else:
-        m = mdw.m
-        n = mdw.n
-        mdw = mdw.dyckword
-        assert(type(mdw) == list)
-    areaseq = binary_to_areaseq(mdw)
-    print("areaseq is ", areaseq)
-    i = 0
-    mcat = m_catalan(n, m)
-    print("Total number of filtered chains to check: ", mcat)
-    batch_size = 100
-
-    start_time = time.time()
-    last_checkpoint_time = start_time
-
-    for chain in filtered_chains_generator(m, n):
-        i += 1
-        # print(chain)
-        # print(area_gluing(chain))
-        glued = area_gluing(chain)
-        # print(glued)
-        if glued == areaseq:
-            total_time = time.time() - start_time
-            print(f"Found matching chain after checking {i+1} chains in {total_time:.2f} seconds")
-            return chain
-
-        if i % batch_size == 0:
-            current_time = time.time()
-            batch_time = current_time - last_checkpoint_time
-            total_time = current_time - start_time
-            print(f"Checked {i} chains so far... (Last {batch_size} took {batch_time:.2f}s, Total time: {total_time:.2f}s)")
-            last_checkpoint_time = current_time
-
 def area_gluing(tup):
     """
     Given an m-tuple of Dyck paths, returns the area vector of the glued m-Dyck path.
@@ -1217,6 +1175,133 @@ def print_out_box_violating_chains(n, m, chains):
     print(f"Total chains processed: {chain_count}")
     print(f"Total mismatched chains found: {mismatch_count}")
     print(f"Results written to {filename}")
+
+def print_random_bounce_chain(n,m):
+    random_n_m = random_m_Dyck_path(Integer(n),Integer(m))
+    mdp_n = RationalDyckPath(random_n_m)
+    split_n = mdp_n.split()
+    for dp in split_n:
+        DyckWord(dp).pp()
+    print("m-Dyck word:")
+    print(random_n_m)
+    print(binary_to_areaseq(random_n_m))
+    print()
+    print("bounce chain:")
+    for dp in split_n:
+        print(DyckWord(dp).to_area_sequence())
+    print()
+    for dp in split_n:
+        print(dp)
+
+def generate_integer_partitions(n, m):
+    """
+    Generate all ways to partition integer n into m non-negative increasing parts.
+    Returns a list of tuples where each tuple has m elements summing to n.
+    """
+    def pad(li, target_length):
+        return li + [0] * (target_length - len(li))
+    partitions = []
+    for partition in Partitions(n, max_length=m):
+        padded = pad(list(partition), m)
+        partitions.append(list(reversed(padded)))
+    return partitions
+
+
+def is_valid_area_sequence(area_seq):
+    """
+    Check if an area sequence is valid for a Dyck path:
+    - Each consecutive difference is at most 1
+    - The sequence starts at 0
+    """
+    if not area_seq:
+        return True
+
+    if area_seq[0] != 0:
+        return False
+    for i in range(len(area_seq) - 1):
+        if area_seq[i+1] - area_seq[i] > 1:
+            return False
+
+    # print(f"DEBUG Valid area sequence: {area_seq}")
+    return True
+
+def area_gluing_inverse(seq, m):
+    """
+    Convert a sequence (area or binary) representing an m-Dyck path into the unique filtered chain of Dyck paths.
+
+    Args:
+        seq: List of integers representing the area sequence or the binary sequence of an m-Dyck path
+        m: Number of Dyck paths in the resulting chain
+
+    Returns:
+        The unique valid filtered chain as a list of Dyck paths in binary format, or None if not found
+    """
+    if seq[0] == 1:
+        seq = binary_to_areaseq(seq)
+    print(f"Starting with area_seq={seq}, m={m}")
+    n = len(seq)
+    step = 0
+
+    def generate_partitions(pos, current_partitions):
+        """
+        Recursively generate all valid partitions of the area sequence.
+
+        Args:
+            pos: Current position in area_seq
+            current_partitions: List of m lists, each representing partial area sequence
+        """
+        nonlocal step
+        step += 1
+        if step % 10000 == 0:
+            print(f"  Progress: {pos}/{n}, step {step}")
+
+        if pos == n:
+            # Convert area sequences to Dyck paths and check if it's a filtered chain
+            # print(f"DEBUG At end, checking partitions: {current_partitions}")
+            try:
+                chain = []
+                for i in range(m):
+                    if not is_valid_area_sequence(current_partitions[i]):
+                        return None  # Skip invalid area sequences
+
+                    # Convert area sequence to binary Dyck path
+                    binary_path = area_to_binary(current_partitions[i])
+                    chain.append(binary_path)
+
+                # Check if this chain is filtered
+                if check_filtered(chain):
+                    return chain
+
+            except Exception as e:
+                print(f"Exception during conversion: {e}")
+                # Skip invalid conversions
+                pass
+            return None
+
+        # Generate all partitions of area_seq[pos] into m parts
+        current_value = seq[pos]
+        # print(f"DEBUG At pos {pos}, partitioning value {current_value}")
+
+        for partition in generate_integer_partitions(current_value, m):
+            # Check if adding this partition maintains valid area sequences
+            valid = True
+            new_partitions = [seq.copy() for seq in current_partitions]
+
+            for i in range(m):
+                new_partitions[i].append(partition[i])
+                valid = is_valid_area_sequence(new_partitions[i])
+
+            if valid:
+                # print(f"DEBUG Trying partition {partition}")
+                result = generate_partitions(pos + 1, new_partitions)
+                if result is not None:
+                    return result
+
+        return None
+
+    # Start with empty area sequences for each of the m Dyck paths
+    initial_partitions = [[] for _ in range(m)]
+    return generate_partitions(0, initial_partitions)
 
 if __name__ == "__main__":
     pass
