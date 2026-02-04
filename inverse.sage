@@ -1039,8 +1039,8 @@ def slide_box(chain):
     Given a chain of Dyck paths, perform the gravity falls and then the slide operation on it.
     """
     boxes_list = [get_boxes_under_dp(dw) for dw in chain]
-    new_boxes_list = gravity_falls(boxes_list) # it looks like gravity_falls modifies in place, so we might not need to assign it...
-    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in new_boxes_list]
+    boxes_list = gravity_falls(boxes_list) # it looks like gravity_falls modifies in place, so we might not need to assign it...
+    new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in boxes_list]
     success, witness = check_in_box_filtered(new_chain, return_witness=True)
     if success:
         return new_chain
@@ -1048,17 +1048,43 @@ def slide_box(chain):
     right_box_index = 1 if witness[2][0] <= witness[3][0] else 0
     right_box = witness[2 + right_box_index]
     right_box_dp = witness[right_box_index]
-    sliding_boxes_list = [boxes.copy() for boxes in new_boxes_list]
+    sliding_boxes_list = [boxes.copy() for boxes in boxes_list]
 
-
-    while gravity_falls(sliding_boxes_list) == new_boxes_list:
-        stack_to_slide = [box for box in new_boxes_list[right_box_dp] if box[0] == right_box[0] and box[1]  >= right_box[1]]
+    while gravity_falls(sliding_boxes_list) == boxes_list:
+        # select the stack of boxes in the same dyck path on top of (i.e. north of) the current box
+        stack_to_slide = [box for box in boxes_list[right_box_dp] if box[0] == right_box[0] and box[1]  >= right_box[1]]
+        stack_to_slide.sort(key=lambda x: x[1])  # sort by row (height) to slide from southmost to northmost
         for box in stack_to_slide:
             sliding_boxes_list[right_box_dp].remove(box)
             i = 1
-            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + 1]:
+            j = 1
+            # push box to the left until it can start falling
+            while (box[0] - i, box[1]) in sliding_boxes_list[right_box_dp + j]:
                 i += 1
-            sliding_boxes_list[right_box_dp + 1].append((box[0] - i, box[1]))  # slide left and drop down one level
+            # slide left and drop down one level
+            sliding_boxes_list[right_box_dp + j].append((box[0] - i, box[1]))
+            valid = False
+            while not valid:
+                # let it fall as far as it will go
+                new_sliding_boxes_list = gravity_falls([boxes.copy() for boxes in sliding_boxes_list])
+
+                # figure out how many levels it fell
+                for idx in range(len(new_sliding_boxes_list)):
+                    new_box = set(new_sliding_boxes_list[idx]) - set(sliding_boxes_list[idx])
+                    if len(new_box) > 0:
+                        j += idx - (right_box_dp + j)
+                        break
+                # now slide further to the left until the new box actually sits on a column of boxes south of it
+                sliding_boxes_list = new_sliding_boxes_list
+                if (box[0] - i, box[1] - 1) not in sliding_boxes_list[right_box_dp + j]:
+                    i += 1
+                    sliding_boxes_list[right_box_dp + j].remove((box[0] - i + 1, box[1]))
+                    sliding_boxes_list[right_box_dp + j].append((box[0] - i, box[1]))
+                else:
+                    valid = True
+
+
+
     new_chain = [dp_from_boxes(boxes, len(chain[0]) // 2) for boxes in sliding_boxes_list]
 
     return new_chain
@@ -1109,11 +1135,39 @@ def slip_n_slide(chain):
     """
     Given a chain of Dyck paths, perform the gravity falls and slide operation repeatedly until it stabilizes.
     """
-    previous_chain = chain
+    previous_chain = [dp_from_boxes(boxes, n=len(chain[0]) // 2) for boxes in gravity_falls(chain)]
+    chain_area_seq = [DyckWord(dp).to_area_sequence() for dp in chain]
+    chain_area_sum = [sum(x) for x in zip(*chain_area_seq)]
+    gravity_area_seq = [DyckWord(dp).to_area_sequence() for dp in previous_chain]
+    gravity_area_sum = [sum(x) for x in zip(*gravity_area_seq)]
+    if chain_area_sum != gravity_area_sum:
+        print(f"after gravity falls, Total area sequence changed from {chain_area_sum} to {gravity_area_sum}")
+        print("Previous chain:")
+        for dp in chain:
+            DyckWord(dp).pp()
+        print("New chain:")
+        for dp in previous_chain:
+            DyckWord(dp).pp()
+    step = 0
     while True:
         new_chain = slide_box(previous_chain)
+
+        # now we make sure our sliding function is not buggy
+        new_area_seq = [DyckWord(dp).to_area_sequence() for dp in new_chain]
+        new_total_area_seq = [sum(x) for x in zip(*new_area_seq)]
+        previous_chain_area_seq = [DyckWord(dp).to_area_sequence() for dp in previous_chain]
+        previous_total_area_seq = [sum(x) for x in zip(*previous_chain_area_seq)]
+        if new_total_area_seq != previous_total_area_seq:
+            print(f"Total area sequence changed from {previous_total_area_seq} to {new_total_area_seq} on step {step}")
+            print("Previous chain:")
+            for dp in previous_chain:
+                DyckWord(dp).pp()
+            print("New chain:")
+            for dp in new_chain:
+                DyckWord(dp).pp()
         if new_chain == previous_chain:
             return new_chain
+        step += 1
         previous_chain = new_chain
 
 
